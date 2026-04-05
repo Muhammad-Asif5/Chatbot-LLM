@@ -1,0 +1,49 @@
+# ── Virtual Environment ──────────────────────────────
+venv/
+env/
+.env
+
+# ── Python Cache ─────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+src/__pycache__/
+
+# ── Model Files (bohot bade hain — Git ke liye nahi) ─
+models/
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# ── Vector Database (locally rebuild hoga) ───────────
+embeddings/vector_db.pkl
+
+# ── SQL Database ─────────────────────────────────────
+data/support.db
+data/*.db
+
+# ── HuggingFace Cache ─────────────────────────────────
+.cache/
+
+# ── OS Files ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE Files ─────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ── Logs ─────────────────────────────────────────────
+logs/
+*.log
+
+# ── Debug Files ──────────────────────────────────────
+check_db.py
+check_file.py
+check_search.py
