@@ -54,6 +54,7 @@ def summarize(text: str) -> str:
     """Summarize a long document or passage."""
     prompt = f"summarize: {clean_text(text)[:1000]}"
     inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True).to(device)
+    print(f"[Summarize] Input tokens: {inputs['input_ids'].shape[1]} prompt: {prompt[:50]}...")
     
     with torch.no_grad():
         outputs = model.generate(**inputs, max_new_tokens=200, num_beams=4)
@@ -98,18 +99,18 @@ def query(user_id: str, user_input: str, lang: str = "en") -> dict:
         #     confidence = "medium"
 
         # else:
-        #     # ── Step 3: LLM Generation / Not Found ───────────────────
-        #     # context = vector_results[0]["answer"] if vector_results else ""
-        #     # answer = generate_answer(english_input, context)
-        #     # source = "llm_generated"
-        #     # confidence = "low"
+        # ── Step 3: LLM Generation / Not Found ───────────────────
+        context = vector_results[0]["answer"] if vector_results else ""
+        answer = generate_answer(english_input, context)
+        source = "llm_generated"
+        confidence = "low"
 
-        answer     = (
-            "I'm sorry, I don't have information about that. "
-            "Please contact support for further assistance."
-        )
-        source     = "not_found"
-        confidence = "none"
+        # answer     = (
+        #     "I'm sorry, I don't have information about that. "
+        #     "Please contact support for further assistance."
+        # )
+        # source     = "not_found"
+        # confidence = "none"
 
     # ── Translate back to user language ─────────────────
     final_answer = translate_from_english(answer, lang)

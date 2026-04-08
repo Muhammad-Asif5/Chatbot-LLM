@@ -9,19 +9,19 @@
   style.innerHTML = `
     #vst-btn-${id} {
       position:fixed; bottom:30px; right:30px; width:60px; height:60px;
-      background:#e94560; border-radius:50%; cursor:pointer;
+      background:#405189; border-radius:50%; cursor:pointer;
       box-shadow:0 4px 15px rgba(0,0,0,0.3); font-size:26px;
       z-index:9999; border:none; color:white;
     }
     #vst-box-${id} {
       position:fixed; bottom:100px; right:30px; width:370px; height:500px;
-      background:#1a1a2e; border-radius:16px; display:none;
+      background:#ffffff; border-radius:16px; display:none;
       flex-direction:column; z-index:9999; overflow:hidden;
       box-shadow:0 8px 32px rgba(0,0,0,0.4);
     }
     #vst-box-${id}.open { display:flex; }
     .vh-${id} {
-      background:#e94560; padding:14px 18px; color:white;
+      background:#405189; padding:14px 18px; color:white;
       font-family:Arial; font-weight:bold; font-size:14px;
       display:flex; justify-content:space-between; align-items:center;
     }
@@ -38,18 +38,18 @@
       padding:9px 13px; border-radius:12px; max-width:80%; font-size:13px;
     }
     .vi-${id} {
-      display:flex; padding:10px; gap:8px; background:#16213e;
+      display:flex; padding:10px; gap:8px; background:#405189;
     }
     .vi-${id} select {
       padding:8px; border-radius:8px; border:none;
-      background:#1a1a2e; color:white; font-size:12px;
+      background:#405189; color:white; font-size:12px;
     }
     .vi-${id} input {
       flex:1; padding:8px 12px; border-radius:8px; border:none;
-      background:#1a1a2e; color:white; font-size:13px; outline:none;
+      background:#ffffff; color:#403d3d; font-size:13px; outline:none;
     }
     .vi-${id} button {
-      padding:8px 14px; background:#e94560; color:white;
+      padding:8px 14px; background:#ffffff; color:#88888;
       border:none; border-radius:8px; cursor:pointer; font-size:13px;
     }
     .vt-${id} { color:#888; font-size:12px; padding:0 14px 8px; font-family:Arial; display:none; }

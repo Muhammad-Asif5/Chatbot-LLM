@@ -91,7 +91,7 @@ export class RegisterComponent {
     this.auth.register({ name: this.name, email: this.email, password: this.password }).subscribe({
       next: () => this.router.navigate(['/dashboard']),
       error: (e) => {
-        this.error   = e.error?.detail || 'Registration failed';
+        this.error   = e.error?.errors || 'Registration failed';
         this.loading = false;
       }
     });

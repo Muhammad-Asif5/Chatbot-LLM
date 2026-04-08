@@ -1,16 +1,29 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from src.database import get_db
 from src.models import User
 from src.auth import hash_password, verify_password, create_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+# routers/auth_router.py mein
 class RegisterRequest(BaseModel):
     name:     str
     email:    EmailStr
     password: str
+
+    @validator('password')
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+
+    @validator('name')
+    def name_valid(cls, v):
+        if len(v.strip()) < 2:
+            raise ValueError('Name must be at least 2 characters')
+        return v
 
 class LoginRequest(BaseModel):
     email:    EmailStr
