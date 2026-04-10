@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from src.database import engine
 from src.models import Base
-from routers import auth_router, faq_router, document_router, widget_router, analytics_router
+from routers import auth_router, faq_router, document_router, widget_router, analytics_router, knowledge_router
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 # ✅ Rate Limiting Imports
@@ -74,6 +74,7 @@ app.include_router(faq_router.router)
 app.include_router(document_router.router)
 app.include_router(widget_router.router)
 app.include_router(analytics_router.router)
+app.include_router(knowledge_router.router)
 
 # ── Health Check ─────────────────────────────────────────
 @app.get("/health")

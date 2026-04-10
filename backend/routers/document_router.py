@@ -3,7 +3,7 @@ import shutil
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.models import Document, FAQ, User
+from src.models import Document, FAQ, KnowledgeBase, User
 from src.dependencies import get_current_user
 from src.embedding import build_vector_db
 
@@ -12,12 +12,17 @@ router = APIRouter(prefix="/api/documents", tags=["Documents"])
 UPLOAD_DIR = "uploads"
 
 def rebuild_user_vector_db(user_id: str, db: Session):
+    """Helper — rebuild vector DB after FAQ changes."""
     faqs = db.query(FAQ).filter(FAQ.user_id == user_id).all()
     docs = db.query(Document).filter(Document.user_id == user_id).all()
+    docs = [d for d in docs if d.content and len(d.content.strip()) > 0]
+    kbs  = db.query(KnowledgeBase).filter(KnowledgeBase.user_id == user_id).all()
+
     build_vector_db(
-        user_id   = user_id,
-        faqs      = [{"question": f.question, "answer": f.answer, "category": f.category} for f in faqs],
-        documents = [{"filename": d.filename, "content": d.content} for d in docs]
+        user_id        = user_id,
+        faqs           = [{"question": f.question, "answer": f.answer, "category": f.category} for f in faqs],
+        documents      = [{"filename": d.filename, "content": d.content} for d in docs],
+        knowledge_base = [{"title": k.title, "content": k.content} for k in kbs]
     )
 
 @router.get("/")

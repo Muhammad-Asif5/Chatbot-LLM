@@ -25,6 +25,7 @@ import { AuthService } from '../../services/auth.service';
           <a routerLink="documents" routerLinkActive="active"><span>📄</span> Documents</a>
           <a routerLink="embed"     routerLinkActive="active"><span>🔗</span> Embed Code</a>
           <a routerLink="analytics" routerLinkActive="active"><span>📊</span> Analytics</a>
+          <a routerLink="knowledge" routerLinkActive="active"><span>📝</span> Knowledge Base</a>
         </nav>
 
         <button (click)="logout()" class="logout-btn">🚪 Logout</button>

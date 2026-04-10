@@ -44,7 +44,12 @@ def get_vector_db_path(user_id: str) -> str:
     os.makedirs(path, exist_ok=True)
     return f"{path}/vector_db.pkl"
 
-def build_vector_db(user_id: str, faqs: list[dict], documents: list[dict]):
+def build_vector_db(
+    user_id:        str,
+    faqs:           list[dict],
+    documents:      list[dict],
+    knowledge_base: list[dict] = []   # ← naya parameter
+):	  
     """
     Build vector DB for a specific user.
     faqs: [{"question": ..., "answer": ..., "category": ...}]
@@ -86,6 +91,36 @@ def build_vector_db(user_id: str, faqs: list[dict], documents: list[dict]):
                 "category": doc["filename"]
             })
 
+    # 3. Knowledge Base ← Naya
+    for kb in knowledge_base:
+        raw_content = kb["content"]
+
+        # ── Markdown headers se split karo ───────────
+        import re
+        sections = re.split(r'\n(?=#{1,3} )', raw_content)
+        sections = [s.strip() for s in sections if len(s.strip()) > 10]
+
+        # ── Fallback: double newline ──────────────────
+        if len(sections) <= 1:
+            sections = [s.strip() for s in raw_content.split('\n\n') if len(s.strip()) > 10]
+
+        for section in sections:
+            # Markdown headers clean karo
+            clean_section = re.sub(r'^#{1,3} ', '', section, flags=re.MULTILINE)
+            lines         = clean_section.split('\n')
+            question_part = lines[0].strip()
+            answer_part   = ' '.join(lines[1:]).strip() if len(lines) > 1 else question_part
+
+            entries.append({
+                "text":     clean_text(clean_section),
+                "question": question_part,
+                "answer":   answer_part if answer_part else question_part,
+                "source":   "knowledge_base",
+                "category": kb["title"]
+            })
+
+        print(f"[Embedding] KB '{kb['title']}': {len(sections)} chunks")
+
     if not entries:
         print(f"[Embedding] No data for user {user_id}")
         return
@@ -103,10 +138,7 @@ def build_vector_db(user_id: str, faqs: list[dict], documents: list[dict]):
     # 5. Save
     save_path = get_vector_db_path(user_id)
     with open(save_path, "wb") as f:
-        pickle.dump({
-             "index": index,
-             "entries": entries
-             }, f)
+        pickle.dump({"index": index, "entries": entries}, f)
 
     print(f"[Embedding] User {user_id}: {len(entries)} entries saved.")
 

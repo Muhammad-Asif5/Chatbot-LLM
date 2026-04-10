@@ -36,7 +36,16 @@ tokenizer, model, device = load_model()
 # ── GENERATE WITH LLM ────────────────────────────────────
 def generate_answer(question: str, context: str = "") -> str:
     """Use fine-tuned LLM to generate an answer."""
-    prompt = f"answer question based on context: {context}\nquestion: {question}" if context else f"answer question: {question}"
+    if context:
+        prompt = (
+            f"Read the following text and answer the question precisely.\n"
+            f"Text: {context[:900]}\n"
+            f"Question: {question}\n"
+            f"Answer:"
+        )
+    else:
+        prompt = f"Answer the following question: {question}\nAnswer:"
+
     inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True).to(device)
     
     with torch.no_grad():
@@ -63,7 +72,7 @@ def summarize(text: str) -> str:
 # ── MAIN QUERY PIPELINE ──────────────────────────────────
 def query(user_id: str, user_input: str, lang: str = "en") -> dict:
     """
-    Full pipeline: 
+    Full pipeline:
        Per-user query pipeline:
     1. Language — user ki di hui use karo, auto detect sirf backup
     2. Search vector DB (semantic) — only HIGH confidence
@@ -99,10 +108,10 @@ def query(user_id: str, user_input: str, lang: str = "en") -> dict:
         #     confidence = "medium"
 
         # else:
-        # ── Step 3: LLM Generation / Not Found ───────────────────
-        context = vector_results[0]["answer"] if vector_results else ""
-        answer = generate_answer(english_input, context)
-        source = "llm_generated"
+        # ── Step 3: LLM Generation / Not Found ───────────
+        context    = vector_results[0]["answer"] if vector_results else ""
+        answer     = generate_answer(english_input, context)
+        source     = "llm_generated"
         confidence = "low"
 
         # answer     = (

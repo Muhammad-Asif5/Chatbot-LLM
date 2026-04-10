@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: 'documents',loadComponent: () => import('./pages/documents/documents.component').then(m => m.DocumentsComponent) },
       { path: 'embed',    loadComponent: () => import('./pages/embed-code/embed-code.component').then(m => m.EmbedCodeComponent) },
       { path: 'analytics',loadComponent: () => import('./pages/analytics/analytics.component').then(m => m.AnalyticsComponent) },
+      { path: 'knowledge',loadComponent: () => import('./pages/knowledge/knowledge.component').then(m => m.KnowledgeComponent) }
     ]
   },
   { path: '**', redirectTo: 'login' }

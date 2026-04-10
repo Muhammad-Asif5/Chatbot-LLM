@@ -113,7 +113,7 @@
       });
       const data = await res.json();
       typing.style.display = "none";
-      msgs.innerHTML += `<div class="vb-${id}">${data.answer}</div>`;
+      msgs.innerHTML += `<div class="vb-${id}">${data.data.answer}</div>`;
     } catch (e) {
       typing.style.display = "none";
       msgs.innerHTML += `<div class="vb-${id}">Sorry, unable to connect.</div>`;

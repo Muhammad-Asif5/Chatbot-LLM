@@ -21,6 +21,7 @@ class User(Base):
     faqs       = relationship("FAQ",      back_populates="user", cascade="all, delete")
     documents  = relationship("Document", back_populates="user", cascade="all, delete")
     chat_logs  = relationship("ChatLog",  back_populates="user", cascade="all, delete")
+    knowledge_base = relationship("KnowledgeBase", back_populates="user", cascade="all, delete")
 
 class FAQ(Base):
     __tablename__ = "faqs"
@@ -57,3 +58,15 @@ class ChatLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user       = relationship("User", back_populates="chat_logs")
+    
+class KnowledgeBase(Base):
+    __tablename__ = "knowledge_base"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    user_id    = Column(String, ForeignKey("users.id"), nullable=False)
+    title      = Column(String, nullable=False)
+    content    = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user       = relationship("User", back_populates="knowledge_base")
