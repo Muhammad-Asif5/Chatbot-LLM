@@ -35,14 +35,12 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
 
     # ✅ Normalize: treat "en" sent from frontend as "auto" too
     # Some frontends hardcode language="en" — this ensures detection still runs
-    lang = req.language or "auto"
-    if lang == "en":
-        lang = "auto"
+    target_lang = req.language if req.language else "auto"
 
     result = run_query(
         user_id    = req.owner_id,
         user_input = req.question,
-        lang       = lang
+        target_lang       = target_lang
     )
     
     print(f"\n\n📝Step Final - Query result: {result}")

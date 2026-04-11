@@ -1,3 +1,4 @@
+# inference.py - Updated query function
 """
 Inference engine:
 Priority 1 → Vector DB HIGH confidence  → return KB answer directly
@@ -123,7 +124,6 @@ def generate_answer(question: str, context: str, system_prompt: str) -> str:
     raw = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
     # ── Safety filter: reject single-word or vague answers ──
-    # flan-t5 sometimes outputs just "yes", "no", "true" when context is weak
     BAD_ANSWERS = {"yes", "no", "true", "false", "maybe", "correct", "incorrect"}
     if raw.lower().strip(".").strip() in BAD_ANSWERS:
         return NOT_FOUND_MESSAGE
@@ -142,66 +142,96 @@ def summarize(text: str) -> str:
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ── MAIN QUERY PIPELINE ──────────────────────────────────
-def query(user_id: str, user_input: str, lang: str = "en") -> dict:
+def query(user_id: str, user_input: str, target_lang: str = "auto") -> dict:
     """
     Pipeline:
-    1. Detect / use provided language
-    2. Translate to English for embedding search
-    3. Vector DB search — HIGH confidence → return answer directly
-    4. Vector DB search — MEDIUM confidence → LLM with strict context + system prompt
-    5. No match / LOW only → polite not-found message (never raw LLM hallucination)
-    6. Translate final answer back to user's language
+    1. Detect language of user_input
+    2. Translate user_input to English (if not already English)
+    3. Vector DB search in English
+    4. HIGH confidence → return KB answer (in English)
+    5. MEDIUM confidence → LLM with strict context (in English)
+    6. No match → polite not-found message (in English)
+    7. Translate final answer to target_lang (if target_lang != "en")
+    
+    Args:
+        user_id: Owner's user ID
+        user_input: User's question (any language)
+        target_lang: Desired answer language ("auto", "en", "ur", "ar", etc.)
+                    "auto" = answer in same language as question
     """
     user_input = clean_text(user_input)
     
-    print(f"\nStep 1- Received query: '{user_input}' with lang='{lang}'")
+    print(f"\n{'='*50}")
+    print(f"[Query] User: {user_id}")
+    print(f"[Query] Input: '{user_input[:100]}...'")
+    print(f"[Query] Target language: {target_lang}")
 
-    # ── Language ─────────────────────────────────────────
-    if not lang or lang == "auto":
-        lang = detect_language(user_input)
-    print(f"\nStep 2 - Detected language: {lang} and user input: '{user_input}...'")
-    english_input = translate_to_english(user_input, lang)
-    print(f"Step 4 - [Query] Translated to English: '{english_input}'")
+    # ── Step 1: Detect input language ─────────────────────
+    input_lang = detect_language(user_input)
+    print(f"[Query] Detected input language: {input_lang}")
+    
+    # ── Step 2: Determine answer language ─────────────────
+    if target_lang == "auto" or not target_lang:
+        answer_lang = input_lang  # Answer in same language as question
+    else:
+        answer_lang = target_lang  # Answer in requested language
+    
+    print(f"[Query] Answer will be in: {answer_lang}")
+    
+    # ── Step 3: Translate input to English for search ─────
+    english_input = translate_to_english(user_input, input_lang)
+    print(f"[Query] English search query: '{english_input[:100]}...'")
 
-    # ── Vector search ────────────────────────────────────
+    # ── Step 4: Vector search ─────────────────────────────
     vector_results = search_vector_db(user_id, english_input, top_k=5)
-    print(f"\nStep 5 - [Query] Vector search results (top {len(vector_results)}):")
+    print(f"[Query] Found {len(vector_results)} vector matches")
 
     best       = vector_results[0] if vector_results else None
     confidence = best["confidence"] if best else "none"
-    print(f"\nStep 6 - Best match confidence: {confidence} and answer: '{best['answer'][:100] if best else 'N/A'}...'")
+    print(f"[Query] Best confidence: {confidence}")
 
-    # ── HIGH confidence: return KB answer as-is ──────────
+    # ── Step 5: Get answer in English ─────────────────────
+    english_answer = ""
+    source = ""
+    
     if best and confidence == "high":
-        answer = best["answer"]
+        english_answer = best["answer"]
         source = f"vector_db ({best['source']})"
-        print(f"\nStep 7 - [Query] High confidence match: '{answer[:100]}...' from source: {source}")
-
-    # ── MEDIUM confidence: LLM grounded strictly to context ──
+        print(f"[Query] HIGH confidence - using vector answer")
+        
     elif best and confidence == "medium":
         # Combine top-3 results for richer context
         context = "\n\n".join([
             r["answer"] for r in vector_results[:3] if r.get("answer")
         ])
         system_prompt = get_system_prompt(user_id)
-        answer        = generate_answer(english_input, context, system_prompt)
-        source        = "llm_grounded"
-
-    # ── LOW / NO match: never guess, always redirect ─────
+        english_answer = generate_answer(english_input, context, system_prompt)
+        source = "llm_grounded"
+        print(f"[Query] MEDIUM confidence - generated grounded answer")
+        
     else:
-        answer = NOT_FOUND_MESSAGE
+        english_answer = NOT_FOUND_MESSAGE
         source = "not_found"
         confidence = "none"
+        print(f"[Query] No match - returning not found message")
+    
+    print(f"[Query] English answer: '{english_answer[:100]}...'")
 
-    # ── Translate back ───────────────────────────────────
-    print(f"\nStep 8 - Final English answer before translation: '{answer[:100]}...'")
-    final_answer = translate_from_english(answer, lang)
-    print(f"\nStep 9 - Final answer after translation: '{final_answer[:100]}...' in language: {lang}")
+    # ── Step 6: Translate answer to target language ───────
+    if answer_lang != "en":
+        final_answer = translate_from_english(english_answer, answer_lang)
+        print(f"[Query] Translated to {answer_lang}: '{final_answer[:100]}...'")
+    else:
+        final_answer = english_answer
+        print(f"[Query] Keeping English answer")
+
+    print(f"{'='*50}\n")
 
     return {
         "question":   user_input,
         "answer":     final_answer,
-        "language":   lang,
+        "language":   answer_lang,      # Answer language (for logging)
+        "input_lang": input_lang,       # Question language (for reference)
         "source":     source,
         "confidence": confidence,
     }

@@ -1,6 +1,6 @@
+# utils.py - Updated translation functions
 import re
 import unicodedata
-from langdetect import detect
 from langdetect import detect, DetectorFactory
 from langdetect.lang_detect_exception import LangDetectException
 
@@ -58,21 +58,57 @@ def detect_language(text: str) -> str:
     except Exception:
         return "en"
 
-def translate_to_english(text: str, source_lang: str = "auto") -> str:
-    """Translate text to English using offline translator."""
-    if source_lang == "auto" or source_lang == "en" or not text:
+def translate_to_english(text: str, source_lang: str) -> str:
+    """
+    Translate text to English.
+    If source is already English or empty, return as-is.
+    """
+    if not text or not text.strip():
         return text
-    translator = get_translator()
-    return translator.translate_to_english(text, source_lang)
-
-def translate_from_english(text: str, target_lang: str = "en") -> str:
-    """Translate English text to target language using offline translator."""
-    if target_lang == "en" or not text:
+    
+    # Normalize language code
+    source_lang = source_lang.lower()[:2] if source_lang else "en"
+    
+    # Already English - no translation needed
+    if source_lang == "en":
         return text
+    
+    print(f"[Translate] {source_lang} → en: '{text[:50]}...'")
     translator = get_translator()
-    return translator.translate_from_english(text, target_lang)
+    result = translator.translate_to_english(text, source_lang)
+    
+    # If translation failed or returned same, keep original
+    if not result or result == text:
+        print(f"[Translate] Translation failed, keeping original")
+        return text
+    
+    return result
 
-
+def translate_from_english(text: str, target_lang: str) -> str:
+    """
+    Translate English text to target language.
+    If target is English or empty, return as-is.
+    """
+    if not text or not text.strip():
+        return text
+    
+    # Normalize language code
+    target_lang = target_lang.lower()[:2] if target_lang else "en"
+    
+    # Already English target - no translation needed
+    if target_lang == "en":
+        return text
+    
+    print(f"[Translate] en → {target_lang}: '{text[:50]}...'")
+    translator = get_translator()
+    result = translator.translate_from_english(text, target_lang)
+    
+    # If translation failed or returned same, keep original
+    if not result or result == text:
+        print(f"[Translate] Translation failed, keeping English")
+        return text
+    
+    return result
 
 def truncate_text(text: str, max_length: int = 512) -> str:
     """Truncate text to max token-safe length."""
