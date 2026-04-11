@@ -1,5 +1,4 @@
 import os
-from sqlite3 import IntegrityError
 
 from fastapi.exceptions import RequestValidationError
 
@@ -61,12 +60,12 @@ app.add_middleware(
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ── Register exception handlers ───────────────────────────────────
+# ── Register exception handlers ──────────────────────────
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(IntegrityError, integrity_exception_handler)
-app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
-app.add_exception_handler(Exception, general_exception_handler)
-app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(IntegrityError,         integrity_exception_handler)
+app.add_exception_handler(SQLAlchemyError,        sqlalchemy_exception_handler)
+app.add_exception_handler(Exception,              general_exception_handler)
+app.add_exception_handler(HTTPException,          http_exception_handler)
 
 # ── Routers ──────────────────────────────────────────────
 app.include_router(auth_router.router)

@@ -10,12 +10,11 @@ from src.embedding import build_vector_db
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge Base"])
 
-# ── Helper ───────────────────────────────────────────────
 def rebuild_user_vector_db(user_id: str, db: Session):
-    faqs   = db.query(FAQ).filter(FAQ.user_id == user_id).all()
-    docs   = db.query(Document).filter(Document.user_id == user_id).all()
-    docs   = [d for d in docs if d.content and len(d.content.strip()) > 0]
-    kbs    = db.query(KnowledgeBase).filter(KnowledgeBase.user_id == user_id).all()
+    faqs = db.query(FAQ).filter(FAQ.user_id == user_id).all()
+    docs = db.query(Document).filter(Document.user_id == user_id).all()
+    docs = [d for d in docs if d.content and len(d.content.strip()) > 0]
+    kbs  = db.query(KnowledgeBase).filter(KnowledgeBase.user_id == user_id).all()
 
     build_vector_db(
         user_id        = user_id,
@@ -24,16 +23,14 @@ def rebuild_user_vector_db(user_id: str, db: Session):
         knowledge_base = [{"title": k.title, "content": k.content} for k in kbs]
     )
 
-# ── Pydantic Models ──────────────────────────────────────
 class KBCreate(BaseModel):
     title:   str
     content: str
 
 class KBUpdate(BaseModel):
-    title:   Optional[str]
-    content: Optional[str]
+    title:   Optional[str] = None
+    content: Optional[str] = None
 
-# ── Endpoints ────────────────────────────────────────────
 @router.get("/")
 def get_all(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return db.query(KnowledgeBase).filter(KnowledgeBase.user_id == user.id).all()
@@ -59,6 +56,7 @@ def create_kb(req: KBCreate, db: Session = Depends(get_db), user: User = Depends
         content = req.content.strip()
     )
     db.add(kb)
+    db.flush()    # ✅
     db.commit()
     db.refresh(kb)
     rebuild_user_vector_db(user.id, db)
@@ -73,10 +71,12 @@ def update_kb(kb_id: int, req: KBUpdate, db: Session = Depends(get_db), user: Us
     if not kb:
         raise HTTPException(status_code=404, detail="Not found")
 
-    if req.title:   kb.title      = req.title
-    if req.content: kb.content    = req.content
+    if req.title   is not None: kb.title   = req.title
+    if req.content is not None: kb.content = req.content
     kb.updated_at = datetime.utcnow()
+    db.flush()    # ✅
     db.commit()
+    db.refresh(kb)
     rebuild_user_vector_db(user.id, db)
     return kb
 
@@ -88,7 +88,11 @@ def delete_kb(kb_id: int, db: Session = Depends(get_db), user: User = Depends(ge
     ).first()
     if not kb:
         raise HTTPException(status_code=404, detail="Not found")
+
+    title = kb.title   # ✅ Save before delete
     db.delete(kb)
+    db.flush()    # ✅
     db.commit()
+
     rebuild_user_vector_db(user.id, db)
-    return {"message": f"'{kb.title}' deleted successfully"}
+    return {"message": f"'{title}' deleted successfully", "id": kb_id}

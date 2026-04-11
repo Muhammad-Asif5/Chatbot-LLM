@@ -96,7 +96,7 @@ def build_vector_db(
         raw_content = kb["content"]
 
         # ── Markdown headers se split karo ───────────
-        import re
+
         sections = re.split(r'\n(?=#{1,3} )', raw_content)
         sections = [s.strip() for s in sections if len(s.strip()) > 10]
 

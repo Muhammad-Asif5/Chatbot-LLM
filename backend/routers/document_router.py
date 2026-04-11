@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/documents", tags=["Documents"])
 UPLOAD_DIR = "uploads"
 
 def rebuild_user_vector_db(user_id: str, db: Session):
-    """Helper — rebuild vector DB after FAQ changes."""
+    """Helper — rebuild vector DB after document changes."""
     faqs = db.query(FAQ).filter(FAQ.user_id == user_id).all()
     docs = db.query(Document).filter(Document.user_id == user_id).all()
     docs = [d for d in docs if d.content and len(d.content.strip()) > 0]
@@ -35,14 +35,13 @@ async def upload_document(
     db:   Session    = Depends(get_db),
     user: User       = Depends(get_current_user)
 ):
-    user_dir = os.path.join(UPLOAD_DIR, user.id)
+    user_dir  = os.path.join(UPLOAD_DIR, user.id)
     os.makedirs(user_dir, exist_ok=True)
     file_path = os.path.join(user_dir, file.filename)
 
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # Content read karo
     content = ""
     if file.filename.endswith(".txt"):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -62,13 +61,12 @@ async def upload_document(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"DOCX error: {e}")
 
-    # ── DB mein save karo ────────────────────────────
     doc = Document(user_id=user.id, filename=file.filename, content=content)
     db.add(doc)
+    db.flush()    # ✅
     db.commit()
     db.refresh(doc)
 
-    # ── Vector DB rebuild karo ───────────────────────
     rebuild_user_vector_db(user.id, db)
     return doc
 
@@ -78,17 +76,16 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), user: User = Dep
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # ── Physical file bhi delete karo ────────────────
+    # ── Physical file delete ─────────────────────────
     file_path = os.path.join(UPLOAD_DIR, user.id, doc.filename)
     if os.path.exists(file_path):
         os.remove(file_path)
         print(f"[Document] File deleted: {file_path}")
 
-    # ── DB se delete karo ────────────────────────────
+    filename = doc.filename   # ✅ Save before delete (object expires after commit)
     db.delete(doc)
+    db.flush()    # ✅
     db.commit()
 
-    # ── Vector DB rebuild karo ───────────────────────
     rebuild_user_vector_db(user.id, db)
-
-    return {"message": f"{doc.filename} deleted successfully"}
+    return {"message": f"{filename} deleted successfully", "id": doc_id}
