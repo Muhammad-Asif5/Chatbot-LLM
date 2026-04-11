@@ -18,12 +18,10 @@ argostranslate                  # Offline translation (alternative to deep-trans
 slowapi
 python-dotenv>=1.0.0            # For config
 accelerate>=0.24.0              # HuggingFace multi-GPU / mixed-precision training
-peft>=0.6.0                     # Parameter-efficient fine-tuning (LoRA, adapters)
-# PyPDF2                        # For PDFs
-# python-docx                   # For Word docs
 protobuf>=3.20.0                # For compatibility with newer transformers versions
 python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-aiofiles>=23.0.0
 pydantic[email]>=2.0.0
 bcrypt>=4.0.0
+PyPDF2>=3.0.0                   # For PDFs
+python-docx>=1.0.0              # For Word docs
+sentencepiece>=0.1.99           # Required for MarianMT tokenizers

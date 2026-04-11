@@ -41,6 +41,15 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# # Initialize offline translator (downloads packages if needed)
+# @app.on_event("startup")
+# async def startup_event():
+#     """Initialize services on startup."""
+#     print("[Startup] Initializing offline translator...")
+#     translator = get_translator()
+#     print("[Startup] Ready!")
+
+
 # ✅ Initialize Limiter
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter

@@ -27,7 +27,6 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     owner_id se user validate karo aur answer do.
     """
     user = db.query(User).filter(User.id == req.owner_id).first()
-    print(f"Step 1 - Testing user: {user}")
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -37,7 +36,6 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     # ✅ Normalize: treat "en" sent from frontend as "auto" too
     # Some frontends hardcode language="en" — this ensures detection still runs
     lang = req.language or "auto"
-    print(f"Step 2 - Detected language: {lang}")
     if lang == "en":
         lang = "auto"
 
@@ -47,7 +45,7 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
         lang       = lang
     )
     
-    print(f"Step 4 - Query result: {result}")
+    print(f"\n\n📝Step Final - Query result: {result}")
 
     log = ChatLog(
         user_id  = req.owner_id,

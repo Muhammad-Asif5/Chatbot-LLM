@@ -1,7 +1,13 @@
 import re
 import unicodedata
 from langdetect import detect
-from deep_translator import GoogleTranslator
+from langdetect import detect, DetectorFactory
+from langdetect.lang_detect_exception import LangDetectException
+
+from src.offline_translator import get_translator
+
+# For consistent results
+DetectorFactory.seed = 0
 
 def clean_text(text: str) -> str:
     """Clean and normalize text."""
@@ -16,37 +22,57 @@ def clean_text(text: str) -> str:
     return text
 
 def detect_language(text: str) -> str:
-    """Detect language — fallback to English if uncertain."""
+    """Detect language from text content."""
+    if not text or not text.strip():
+        return "en"  # Default to English for empty text
+    
+    SUPPORTED = {"en", "ur", "ar", "fr", "de", "es", "zh-cn", "zh-tw", "hi"}
+    
     try:
-        # Short text is unreliable, default to English
-        if len(text.split()) < 6:
-            return "en"
+        # Clean the text
+        text = text.strip()
+        
+        # Detect language
         lang = detect(text)
-        # If detected language is unexpected, fallback to English
-        SUPPORTED = {"en", "ur", "ar", "fr", "de", "es", "zh", "hi"}
+        
+        # Normalize Chinese variants
+        if lang.startswith("zh"):
+            lang = "zh-cn"  # or keep as "zh" based on your needs
+            
+        # Return detected language if supported, otherwise English
         return lang if lang in SUPPORTED else "en"
+        
+    except LangDetectException:
+        # If detection fails, try with a cleaned version or return default
+        try:
+            # Remove any problematic characters
+            cleaned = ''.join(c for c in text if c.isprintable())
+            if cleaned and len(cleaned) > 10:  # Only try if we have enough content
+                lang = detect(cleaned)
+                if lang.startswith("zh"):
+                    lang = "zh-cn"
+                return lang if lang in SUPPORTED else "en"
+        except:
+            pass
+        return "en"
     except Exception:
         return "en"
 
 def translate_to_english(text: str, source_lang: str = "auto") -> str:
-    """Translate text to English for processing."""
-    try:
-        if source_lang == "en":
-            return text
-        translator = GoogleTranslator(source=source_lang, target="en")
-        return translator.translate(text)
-    except Exception:
+    """Translate text to English using offline translator."""
+    if source_lang == "auto" or source_lang == "en" or not text:
         return text
+    translator = get_translator()
+    return translator.translate_to_english(text, source_lang)
 
 def translate_from_english(text: str, target_lang: str = "en") -> str:
-    """Translate English response to target language."""
-    try:
-        if target_lang == "en":
-            return text
-        translator = GoogleTranslator(source="en", target=target_lang)
-        return translator.translate(text)
-    except Exception:
+    """Translate English text to target language using offline translator."""
+    if target_lang == "en" or not text:
         return text
+    translator = get_translator()
+    return translator.translate_from_english(text, target_lang)
+
+
 
 def truncate_text(text: str, max_length: int = 512) -> str:
     """Truncate text to max token-safe length."""

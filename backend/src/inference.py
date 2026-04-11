@@ -153,24 +153,29 @@ def query(user_id: str, user_input: str, lang: str = "en") -> dict:
     6. Translate final answer back to user's language
     """
     user_input = clean_text(user_input)
+    
+    print(f"\nStep 1- Received query: '{user_input}' with lang='{lang}'")
 
     # ── Language ─────────────────────────────────────────
     if not lang or lang == "auto":
         lang = detect_language(user_input)
-    print(f"Step 3 - Detected language: {lang}")
+    print(f"\nStep 2 - Detected language: {lang} and user input: '{user_input}...'")
     english_input = translate_to_english(user_input, lang)
     print(f"Step 4 - [Query] Translated to English: '{english_input}'")
 
     # ── Vector search ────────────────────────────────────
     vector_results = search_vector_db(user_id, english_input, top_k=5)
+    print(f"\nStep 5 - [Query] Vector search results (top {len(vector_results)}):")
 
     best       = vector_results[0] if vector_results else None
     confidence = best["confidence"] if best else "none"
+    print(f"\nStep 6 - Best match confidence: {confidence} and answer: '{best['answer'][:100] if best else 'N/A'}...'")
 
     # ── HIGH confidence: return KB answer as-is ──────────
     if best and confidence == "high":
         answer = best["answer"]
         source = f"vector_db ({best['source']})"
+        print(f"\nStep 7 - [Query] High confidence match: '{answer[:100]}...' from source: {source}")
 
     # ── MEDIUM confidence: LLM grounded strictly to context ──
     elif best and confidence == "medium":
@@ -189,7 +194,9 @@ def query(user_id: str, user_input: str, lang: str = "en") -> dict:
         confidence = "none"
 
     # ── Translate back ───────────────────────────────────
+    print(f"\nStep 8 - Final English answer before translation: '{answer[:100]}...'")
     final_answer = translate_from_english(answer, lang)
+    print(f"\nStep 9 - Final answer after translation: '{final_answer[:100]}...' in language: {lang}")
 
     return {
         "question":   user_input,
