@@ -1,8 +1,8 @@
 """
 Inference engine:
-Priority 1 → Vector DB (semantic search on FAQs + docs)
-Priority 2 → SQL keyword search
-Priority 3 → Fine-tuned LLM generation / Not Found Message
+Priority 1 → Vector DB HIGH confidence  → return KB answer directly
+Priority 2 → Vector DB MEDIUM confidence → pass context to LLM with strict system prompt
+Priority 3 → No match                   → polite not-found message (never raw LLM)
 """
 
 import os
@@ -13,11 +13,20 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from sqlalchemy.orm import Session
 from src.embedding import search_vector_db
 from src.utils import clean_text, detect_language, translate_to_english, translate_from_english
 
 MODEL_PATH     = "models/llm_model"
 FALLBACK_MODEL = "google/flan-t5-base"
+
+# ── NOT FOUND message ────────────────────────────────────
+NOT_FOUND_MESSAGE = (
+    "I'm sorry, I don't have that information right now. "
+    "Please contact our support team for further assistance:\n"
+    "📧 Email: support@theclothehanger.com\n"
+    "📞 Phone: 555 123 4567"
+)
 
 # ── LOAD MODEL ───────────────────────────────────────────
 def load_model():
@@ -33,38 +42,101 @@ def load_model():
 
 tokenizer, model, device = load_model()
 
-# ── GENERATE WITH LLM ────────────────────────────────────
-def generate_answer(question: str, context: str = "") -> str:
-    """Use fine-tuned LLM to generate an answer."""
-    if context:
-        prompt = (
-            f"Read the following text and answer the question precisely.\n"
-            f"Text: {context[:900]}\n"
-            f"Question: {question}\n"
-            f"Answer:"
-        )
-    else:
-        prompt = f"Answer the following question: {question}\nAnswer:"
+# ── FETCH SYSTEM PROMPT FROM KB ──────────────────────────
+def get_system_prompt(user_id: str) -> str:
+    """
+    Read the user's Knowledge Base entries that contain system/role prompts.
+    These are KB entries whose title contains keywords like 'prompt', 'role',
+    'assistant', 'chatbot', 'guidelines', 'instructions'.
+    Returns concatenated prompt text, or a safe default.
+    """
+    try:
+        # Import here to avoid circular imports
+        from src.database import SessionLocal
+        from src.models import KnowledgeBase
 
-    inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True).to(device)
-    
+        db = SessionLocal()
+        try:
+            PROMPT_KEYWORDS = ["prompt", "role", "assistant", "chatbot",
+                               "guideline", "instruction", "behavior", "persona"]
+            kbs = db.query(KnowledgeBase).filter(
+                KnowledgeBase.user_id == user_id
+            ).all()
+
+            prompt_entries = []
+            for kb in kbs:
+                title_lower = kb.title.lower()
+                if any(kw in title_lower for kw in PROMPT_KEYWORDS):
+                    prompt_entries.append(kb.content)
+
+            if prompt_entries:
+                return "\n\n---\n\n".join(prompt_entries)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[Inference] Could not load system prompt: {e}")
+
+    # Safe default — always polite, never invents answers
+    return (
+        "You are a helpful and polite customer support assistant. "
+        "Answer ONLY using the provided context. "
+        "If the context does not contain enough information to answer, "
+        "say you don't have that information and ask the user to contact support."
+    )
+
+# ── GENERATE WITH STRICT CONTEXT ─────────────────────────
+def generate_answer(question: str, context: str, system_prompt: str) -> str:
+    """
+    Generate answer ONLY from the given context.
+    The prompt is structured so the model cannot answer from its own training data.
+    """
+    # Truncate context to safe token budget
+    context_trimmed = context[:800]
+
+    prompt = (
+        f"{system_prompt[:400]}\n\n"
+        f"Use ONLY the following information to answer. "
+        f"Do NOT use any outside knowledge.\n\n"
+        f"Information:\n{context_trimmed}\n\n"
+        f"Customer question: {question}\n\n"
+        f"Answer (based only on the information above):"
+    )
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        max_length=512,
+        truncation=True
+    ).to(device)
+
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
             max_new_tokens=150,
             num_beams=4,
             early_stopping=True,
-            no_repeat_ngram_size=2
+            no_repeat_ngram_size=3,
+            # Force the model to stay grounded — penalise short yes/no answers
+            min_new_tokens=10,
         )
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    raw = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+    # ── Safety filter: reject single-word or vague answers ──
+    # flan-t5 sometimes outputs just "yes", "no", "true" when context is weak
+    BAD_ANSWERS = {"yes", "no", "true", "false", "maybe", "correct", "incorrect"}
+    if raw.lower().strip(".").strip() in BAD_ANSWERS:
+        return NOT_FOUND_MESSAGE
+
+    return raw
 
 # ── SUMMARIZE ────────────────────────────────────────────
 def summarize(text: str) -> str:
     """Summarize a long document or passage."""
     prompt = f"summarize: {clean_text(text)[:1000]}"
     inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True).to(device)
-    print(f"[Summarize] Input tokens: {inputs['input_ids'].shape[1]} prompt: {prompt[:50]}...")
-    
+    print(f"[Summarize] Input tokens: {inputs['input_ids'].shape[1]}")
+
     with torch.no_grad():
         outputs = model.generate(**inputs, max_new_tokens=200, num_beams=4)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -72,56 +144,51 @@ def summarize(text: str) -> str:
 # ── MAIN QUERY PIPELINE ──────────────────────────────────
 def query(user_id: str, user_input: str, lang: str = "en") -> dict:
     """
-    Full pipeline:
-       Per-user query pipeline:
-    1. Language — user ki di hui use karo, auto detect sirf backup
-    2. Search vector DB (semantic) — only HIGH confidence
-    3. If not high → search SQL DB
-    4. If no match → Not Found message
-    5. Translate answer back to user's language
+    Pipeline:
+    1. Detect / use provided language
+    2. Translate to English for embedding search
+    3. Vector DB search — HIGH confidence → return answer directly
+    4. Vector DB search — MEDIUM confidence → LLM with strict context + system prompt
+    5. No match / LOW only → polite not-found message (never raw LLM hallucination)
+    6. Translate final answer back to user's language
     """
-    user_input    = clean_text(user_input)
-	
-    # ── Language: user ne di toh wahi, warna detect karo ─
+    user_input = clean_text(user_input)
+
+    # ── Language ─────────────────────────────────────────
     if not lang or lang == "auto":
         lang = detect_language(user_input)
-
+    print(f"Step 3 - Detected language: {lang}")
     english_input = translate_to_english(user_input, lang)
+    print(f"Step 4 - [Query] Translated to English: '{english_input}'")
 
-    # ── Step 1: Vector Search — sirf HIGH confidence ─────
-    vector_results = search_vector_db(user_id, english_input, top_k=3)
+    # ── Vector search ────────────────────────────────────
+    vector_results = search_vector_db(user_id, english_input, top_k=5)
 
-    if vector_results and vector_results[0]["confidence"] == "high":
-        best       = vector_results[0]
-        answer     = best["answer"]
-        source     = f"vector_db ({best['source']})"
-        confidence = best["confidence"]
+    best       = vector_results[0] if vector_results else None
+    confidence = best["confidence"] if best else "none"
 
+    # ── HIGH confidence: return KB answer as-is ──────────
+    if best and confidence == "high":
+        answer = best["answer"]
+        source = f"vector_db ({best['source']})"
+
+    # ── MEDIUM confidence: LLM grounded strictly to context ──
+    elif best and confidence == "medium":
+        # Combine top-3 results for richer context
+        context = "\n\n".join([
+            r["answer"] for r in vector_results[:3] if r.get("answer")
+        ])
+        system_prompt = get_system_prompt(user_id)
+        answer        = generate_answer(english_input, context, system_prompt)
+        source        = "llm_grounded"
+
+    # ── LOW / NO match: never guess, always redirect ─────
     else:
-        # ── Step 2: SQL Fallback ─────────────────────────
-        # sql_results = search_faqs_sql(english_input, top_k=3)
+        answer = NOT_FOUND_MESSAGE
+        source = "not_found"
+        confidence = "none"
 
-        # if sql_results:
-        #     best       = sql_results[0]
-        #     answer     = best["answer"]
-        #     source     = "sql_db"
-        #     confidence = "medium"
-
-        # else:
-        # ── Step 3: LLM Generation / Not Found ───────────
-        context    = vector_results[0]["answer"] if vector_results else ""
-        answer     = generate_answer(english_input, context)
-        source     = "llm_generated"
-        confidence = "low"
-
-        # answer     = (
-        #     "I'm sorry, I don't have information about that. "
-        #     "Please contact support for further assistance."
-        # )
-        # source     = "not_found"
-        # confidence = "none"
-
-    # ── Translate back to user language ─────────────────
+    # ── Translate back ───────────────────────────────────
     final_answer = translate_from_english(answer, lang)
 
     return {
@@ -129,5 +196,5 @@ def query(user_id: str, user_input: str, lang: str = "en") -> dict:
         "answer":     final_answer,
         "language":   lang,
         "source":     source,
-        "confidence": confidence
+        "confidence": confidence,
     }

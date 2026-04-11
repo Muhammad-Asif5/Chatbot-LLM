@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from typing import Optional
 from src.database import get_db
 from src.models import User, ChatLog
 from src.inference import query as run_query, summarize
@@ -14,7 +15,10 @@ class SummarizeRequest(BaseModel):
 class WidgetQueryRequest(BaseModel):
     owner_id: str
     question: str
-    language: str = "en"
+    # ✅ FIXED: "en" → "auto"
+    # Old default "en" bypassed ALL language detection in inference.py
+    # "auto" tells the pipeline to detect language from the message itself
+    language: Optional[str] = "en"
 
 @router.post("/query")
 def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
@@ -26,17 +30,25 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     print(f"Step 1 - Testing user: {user}")
     if not user:
         raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {req.owner_id} not found."
-            )
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with id {req.owner_id} not found."
+        )
+
+    # ✅ Normalize: treat "en" sent from frontend as "auto" too
+    # Some frontends hardcode language="en" — this ensures detection still runs
+    lang = req.language or "auto"
+    print(f"Step 2 - Detected language: {lang}")
+    if lang == "en":
+        lang = "auto"
 
     result = run_query(
         user_id    = req.owner_id,
         user_input = req.question,
-        lang       = req.language
+        lang       = lang
     )
+    
+    print(f"Step 4 - Query result: {result}")
 
-    # Chat log save karo
     log = ChatLog(
         user_id  = req.owner_id,
         question = req.question,
@@ -49,18 +61,22 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
 
     return success_response(
         data=result,
-        message=f"Employee with Id {req.owner_id} retrieved",
+        message="Query processed successfully",
         status_code=status.HTTP_200_OK
     )
 
 @router.post("/summarize")
 def summarize_text(req: SummarizeRequest):
-    """Summarize a document or long text."""
     if not req.text.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text cannot be empty"
+        )
     try:
         summary = summarize(req.text)
         return {"summary": summary}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

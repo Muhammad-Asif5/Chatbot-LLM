@@ -1,9 +1,7 @@
 import re
 import unicodedata
 from langdetect import detect
-import argostranslate.package
-import argostranslate.translate
-
+from deep_translator import GoogleTranslator
 
 def clean_text(text: str) -> str:
     """Clean and normalize text."""
@@ -30,19 +28,23 @@ def detect_language(text: str) -> str:
     except Exception:
         return "en"
 
-def translate_to_english(text: str, source_lang: str = "en") -> str:
-    if source_lang == "en":
-        return text
+def translate_to_english(text: str, source_lang: str = "auto") -> str:
+    """Translate text to English for processing."""
     try:
-        return argostranslate.translate.translate(text, source_lang, "en")
+        if source_lang == "en":
+            return text
+        translator = GoogleTranslator(source=source_lang, target="en")
+        return translator.translate(text)
     except Exception:
         return text
 
 def translate_from_english(text: str, target_lang: str = "en") -> str:
-    if target_lang == "en":
-        return text
+    """Translate English response to target language."""
     try:
-        return argostranslate.translate.translate(text, "en", target_lang)
+        if target_lang == "en":
+            return text
+        translator = GoogleTranslator(source="en", target=target_lang)
+        return translator.translate(text)
     except Exception:
         return text
 
