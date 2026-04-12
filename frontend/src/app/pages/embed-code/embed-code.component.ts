@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-embed-code',
@@ -22,7 +23,7 @@ import { AuthService } from '../../services/auth.service';
 
         <div class="info-box">
           <p>🔑 <strong>Owner ID:</strong> {{ userId }}</p>
-          <p>🌐 <strong>API URL:</strong> http://localhost:8000</p>
+          <p>🌐 <strong>API URL:</strong> {{ baseUrl }}</p>
         </div>
       </div>
 
@@ -76,10 +77,12 @@ export class EmbedCodeComponent {
   userId   : string = '';
   copied   = false;
   embedCode: string = '';
+  baseUrl: string = environment.production ? 'https://chatbot.vstschool.com' : 'http://localhost:8000';
 
   constructor(private auth: AuthService) {
+
     this.userId    = this.auth.getCurrentUser()?.id || '';
-    this.embedCode = `<script\n  src="http://localhost:8000/static/chatbot.js"\n  data-owner-id="${this.userId}"\n  data-api="http://localhost:8000">\n<\/script>`;
+    this.embedCode = `<script\n  src="${this.baseUrl}/static/chatbot.js"\n  data-owner-id="${this.userId}"\n  data-api="${this.baseUrl}/api">\n<\/script>`;
   }
 
   copy() {
