@@ -16,11 +16,12 @@ class User(Base):
     password   = Column(String, nullable=False)
     plan       = Column(String, default="free")
     is_active  = Column(Boolean, default=True)
+    is_admin   = Column(Boolean, default=False)        # ✅ NEW: admin flag
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    faqs       = relationship("FAQ",      back_populates="user", cascade="all, delete")
-    documents  = relationship("Document", back_populates="user", cascade="all, delete")
-    chat_logs  = relationship("ChatLog",  back_populates="user", cascade="all, delete")
+    faqs           = relationship("FAQ",           back_populates="user", cascade="all, delete")
+    documents      = relationship("Document",      back_populates="user", cascade="all, delete")
+    chat_logs      = relationship("ChatLog",       back_populates="user", cascade="all, delete")
     knowledge_base = relationship("KnowledgeBase", back_populates="user", cascade="all, delete")
 
 class FAQ(Base):

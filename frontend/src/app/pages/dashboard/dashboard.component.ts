@@ -28,6 +28,13 @@ import { AuthService } from '../../services/auth.service';
           <a routerLink="analytics" routerLinkActive="active"><span>📊</span> Analytics</a>
         </nav>
 
+        <!-- Admin Panel shortcut — only visible to admins -->
+        <a *ngIf="user?.is_admin"
+           (click)="goToAdmin()"
+           class="admin-link">
+          🛡️ Admin Panel
+        </a>
+
         <button (click)="logout()" class="logout-btn">🚪 Logout</button>
       </div>
 
@@ -69,6 +76,16 @@ import { AuthService } from '../../services/auth.service';
     }
     nav a:hover  { background: #1a1a2e; color: white; }
     nav a.active { background: #e94560; color: white; }
+
+    .admin-link {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 8px; font-size: 14px;
+      color: #7c3aed; border: 1px solid #7c3aed33;
+      cursor: pointer; transition: all 0.2s; margin-top: 4px;
+      text-decoration: none;
+    }
+    .admin-link:hover { background: #7c3aed22; color: #a78bfa; }
+
     .logout-btn {
       background: none; border: 1px solid #e94560; color: #e94560;
       padding: 10px; border-radius: 8px; cursor: pointer;
@@ -87,5 +104,6 @@ export class DashboardComponent {
     this.userInitial = this.user?.name?.charAt(0)?.toUpperCase() || 'U';
   }
 
-  logout() { this.auth.logout(); }
+  goToAdmin() { this.router.navigate(['/admin']); }
+  logout()    { this.auth.logout(); }
 }

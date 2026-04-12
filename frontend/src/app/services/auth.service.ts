@@ -26,9 +26,10 @@ export class AuthService {
   }
 
   private setSession(res: any) {
-    localStorage.setItem('token', res.token);
-    localStorage.setItem('user', JSON.stringify(res.user));
-    this.userSubject.next(res.user);
+    
+    localStorage.setItem('token', res.data.token);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    this.userSubject.next(res.data.user);
   }
 
   logout() {

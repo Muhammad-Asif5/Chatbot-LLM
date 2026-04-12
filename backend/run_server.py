@@ -13,7 +13,11 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from src.database import engine
 from src.models import Base
-from routers import auth_router, faq_router, document_router, widget_router, analytics_router, knowledge_router
+from routers import (
+    auth_router, faq_router, document_router,
+    widget_router, analytics_router, knowledge_router,
+    admin_router,                             # ✅ NEW
+)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 # ✅ Rate Limiting Imports
@@ -41,16 +45,6 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# # Initialize offline translator (downloads packages if needed)
-# @app.on_event("startup")
-# async def startup_event():
-#     """Initialize services on startup."""
-#     print("[Startup] Initializing offline translator...")
-#     translator = get_translator()
-#     print("[Startup] Ready!")
-
-
-# ✅ Initialize Limiter
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 
@@ -83,6 +77,7 @@ app.include_router(document_router.router)
 app.include_router(widget_router.router)
 app.include_router(analytics_router.router)
 app.include_router(knowledge_router.router)
+app.include_router(admin_router.router)           # ✅ NEW
 
 # ── Health Check ─────────────────────────────────────────
 @app.get("/health")
