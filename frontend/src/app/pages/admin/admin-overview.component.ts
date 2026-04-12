@@ -86,7 +86,6 @@ import { AdminService } from '../../services/admin.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 1100px; }
     .page-header {
       display: flex; justify-content: space-between;
       align-items: center; margin-bottom: 28px;

@@ -70,12 +70,20 @@ import { AuthService } from '../../services/auth.service';
   `]
 })
 export class LoginComponent {
-  email    = '';
+  email = '';
   password = '';
-  loading  = false;
-  error    = '';
+  loading = false;
+  error = '';
 
   constructor(private auth: AuthService, private router: Router) {}
+
+  ngOnInit() {
+    if (this.auth.isLoggedIn()) {
+      this.router.navigate(['/dashboard']);
+    }else{
+      this.router.navigate(['/login']);
+    }
+  }
 
   login() {
     if (!this.email || !this.password) {
@@ -83,11 +91,11 @@ export class LoginComponent {
       return;
     }
     this.loading = true;
-    this.error   = '';
+    this.error = '';
     this.auth.login({ email: this.email, password: this.password }).subscribe({
       next: () => this.router.navigate(['/dashboard']),
       error: (e) => {
-        this.error   = e.error?.errors || 'Login failed';
+        this.error = e.error?.errors || 'Login failed';
         this.loading = false;
       }
     });

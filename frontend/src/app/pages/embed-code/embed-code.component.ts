@@ -38,7 +38,6 @@ import { AuthService } from '../../services/auth.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 800px; }
     h2 { color: white; font-size: 22px; margin-bottom: 8px; }
     .sub { color: #888; font-size: 14px; margin-bottom: 24px; }
     .card {

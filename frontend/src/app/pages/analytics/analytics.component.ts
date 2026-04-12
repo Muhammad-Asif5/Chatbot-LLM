@@ -48,7 +48,7 @@ import { ApiService } from '../../services/api.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 900px; }
+    
     h2 { color: white; font-size: 22px; margin-bottom: 24px; }
     .stats-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);

@@ -81,6 +81,14 @@ export class RegisterComponent {
 
   constructor(private auth: AuthService, private router: Router) {}
 
+   ngOnInit() {
+    if (this.auth.isLoggedIn()) {
+      this.router.navigate(['/dashboard']);
+    }else{
+      this.router.navigate(['/login']);
+    }
+  }
+  
   register() {
     if (!this.name || !this.email || !this.password) {
       this.error = 'Please fill all fields';

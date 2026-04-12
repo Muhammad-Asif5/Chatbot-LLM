@@ -99,7 +99,7 @@ import { AdminService } from '../../services/admin.service';
 
         <div class="form-group">
           <label>Full Name</label>
-          <input [(ngModel)]="form.name" placeholder="John Doe">
+          <input [(ngModel)]="form.name" type="text" placeholder="John Doe">
         </div>
         <div class="form-group">
           <label>Email</label>
@@ -118,7 +118,7 @@ import { AdminService } from '../../services/admin.service';
               <option value="enterprise">Enterprise</option>
             </select>
           </div>
-          <div class="form-group check-group">
+          <div class="check-group">
             <label class="checkbox-label">
               <input type="checkbox" [(ngModel)]="form.is_admin">
               <span>Admin privileges</span>
@@ -140,7 +140,6 @@ import { AdminService } from '../../services/admin.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 1100px; }
     .page-header {
       display: flex; justify-content: space-between;
       align-items: center; margin-bottom: 24px;
@@ -265,12 +264,13 @@ import { AdminService } from '../../services/admin.service';
     input:focus, select:focus { outline: none; border-color: #7c3aed; }
     select option { background: #1a1a3e; }
 
-    .check-group { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+    .check-group { display: flex; flex-direction: column; justify-content: center; }
     .checkbox-label {
-      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; cursor: pointer; 
       color: #9ca3af; font-size: 13px;
+      margin-top:8px;
     }
-    .checkbox-label input { width: auto; cursor: pointer; }
+    .checkbox-label input { width: auto; cursor: pointer;  }
 
     .modal-actions {
       display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;

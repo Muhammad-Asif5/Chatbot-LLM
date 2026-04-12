@@ -68,7 +68,7 @@ import { ApiService } from '../../services/api.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 900px; }
+    
     .page-header {
       display: flex; justify-content: space-between;
       align-items: center; margin-bottom: 24px;

@@ -112,7 +112,6 @@ import { AdminService } from '../../services/admin.service';
     </div>
   `,
   styles: [`
-    .page { max-width: 900px; }
 
     .back-row {
       color: #7c3aed; cursor: pointer; font-size: 13px;
