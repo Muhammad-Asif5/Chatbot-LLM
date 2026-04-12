@@ -176,7 +176,7 @@ export class KnowledgeComponent implements OnInit {
 
   load() {
     this.loading = true;
-    this.http.get<any[]>(`${this.apiUrl}/api/knowledge/`).subscribe({
+    this.http.get<any[]>(`${this.apiUrl}/knowledge/`).subscribe({
       next: (data) => { this.items = data; this.loading = false; },
       error: ()    => { this.loading = false; }
     });
@@ -192,8 +192,8 @@ export class KnowledgeComponent implements OnInit {
     this.saving = true;
 
     const call = this.editId
-      ? this.http.put(`${this.apiUrl}/api/knowledge/${this.editId}`, this.form)
-      : this.http.post(`${this.apiUrl}/api/knowledge/`, this.form);
+      ? this.http.put(`${this.apiUrl}/knowledge/${this.editId}`, this.form)
+      : this.http.post(`${this.apiUrl}/knowledge/`, this.form);
 
     call.subscribe({
       next: () => {
@@ -215,7 +215,7 @@ export class KnowledgeComponent implements OnInit {
 
   delete(id: number) {
     if (!confirm('Delete this article?')) return;
-    this.http.delete(`${this.apiUrl}/api/knowledge/${id}`).subscribe(() => this.load());
+    this.http.delete(`${this.apiUrl}/knowledge/${id}`).subscribe(() => this.load());
   }
 
   resetForm() {

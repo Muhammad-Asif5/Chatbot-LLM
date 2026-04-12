@@ -8,7 +8,7 @@ from src.dependencies import get_current_user
 from src.embedding import build_vector_db
 from core.response import success_response
 
-router = APIRouter(prefix="/api/faqs", tags=["FAQs"])
+router = APIRouter(prefix="/faqs", tags=["FAQs"])
 
 class FAQCreate(BaseModel):
     question: str

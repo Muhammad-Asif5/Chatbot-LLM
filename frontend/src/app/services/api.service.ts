@@ -11,42 +11,42 @@ export class ApiService {
 
   // ── FAQs ─────────────────────────────────────────────
   getFaqs(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/api/faqs/`);
+    return this.http.get<any[]>(`${this.apiUrl}/faqs/`);
   }
 
   addFaq(data: { question: string; answer: string; category: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/api/faqs/`, data);
+    return this.http.post(`${this.apiUrl}/faqs/`, data);
   }
 
   updateFaq(id: number, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/api/faqs/${id}`, data);
+    return this.http.put(`${this.apiUrl}/faqs/${id}`, data);
   }
 
   deleteFaq(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/api/faqs/${id}`);
+    return this.http.delete(`${this.apiUrl}/faqs/${id}`);
   }
 
   deleteAllFaqs(): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/api/faqs/all/`);
+    return this.http.delete(`${this.apiUrl}/faqs/all/`);
   }
 
   // ── Documents ─────────────────────────────────────────
   getDocuments(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/api/documents/`);
+    return this.http.get<any[]>(`${this.apiUrl}/documents/`);
   }
 
   uploadDocument(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post(`${this.apiUrl}/api/documents/`, formData);
+    return this.http.post(`${this.apiUrl}/documents/`, formData);
   }
 
   deleteDocument(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/api/documents/${id}`);
+    return this.http.delete(`${this.apiUrl}/documents/${id}`);
   }
 
   // ── Analytics ─────────────────────────────────────────
   getAnalytics(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/api/analytics/`);
+    return this.http.get(`${this.apiUrl}/analytics/`);
   }
 }

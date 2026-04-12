@@ -13,7 +13,7 @@ from src.dependencies import get_admin_user
 from src.auth import hash_password
 from core.response import success_response
 
-router = APIRouter(prefix="/api/admin", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ── SERIALIZERS ───────────────────────────────────────────

@@ -26,3 +26,4 @@ PyPDF2>=3.0.0                   # For PDFs
 python-docx>=1.0.0              # For Word docs
 sentencepiece>=0.1.99           # Required for MarianMT tokenizers
 openpyxl
+gunicorn

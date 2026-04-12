@@ -42,7 +42,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="SaaS LLM Platform",
     description="Multi-tenant chatbot platform",
-    version="2.0.0"
+    version="2.0.0",
+    root_path="/api"
 )
 
 limiter = Limiter(key_func=get_remote_address)

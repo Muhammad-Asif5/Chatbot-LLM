@@ -8,7 +8,7 @@ from src.models import KnowledgeBase, FAQ, Document, User
 from src.dependencies import get_current_user
 from src.embedding import build_vector_db
 
-router = APIRouter(prefix="/api/knowledge", tags=["Knowledge Base"])
+router = APIRouter(prefix="/knowledge", tags=["Knowledge Base"])
 
 def rebuild_user_vector_db(user_id: str, db: Session):
     faqs = db.query(FAQ).filter(FAQ.user_id == user_id).all()

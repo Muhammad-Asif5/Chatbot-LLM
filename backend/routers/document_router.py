@@ -10,7 +10,7 @@ from src.dependencies import get_current_user
 from src.embedding import build_vector_db
 from core.response import success_response, error_response
 
-router = APIRouter(prefix="/api/documents", tags=["Documents"])
+router = APIRouter(prefix="/documents", tags=["Documents"])
 
 UPLOAD_DIR = "uploads"
 SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".docx", ".xlsx", ".csv"}

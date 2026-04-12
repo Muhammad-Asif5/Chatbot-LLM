@@ -5,7 +5,7 @@ from src.database import get_db
 from src.models import ChatLog, FAQ, Document, User
 from src.dependencies import get_current_user
 
-router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
+router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 @router.get("/")
 def get_analytics(db: Session = Depends(get_db), user: User = Depends(get_current_user)):

@@ -35,11 +35,9 @@ saas_llm/
 ├── backend/                          # FastAPI Backend
 │   ├── src/
 │   │   ├── __init__.py
-│   │   ├── data_loader.py            # ✅ Existing (modify)
 │   │   ├── embedding.py              # ✅ Existing (modify — per user)
 │   │   ├── inference.py              # ✅ Existing (modify — per user)
 │   │   ├── utils.py                  # ✅ Existing (reuse)
-│   │   ├── train_model.py            # ✅ Existing (reuse)
 │   │   ├── auth.py                   # 🆕 Register/Login/JWT
 │   │   ├── models.py                 # 🆕 DB Models (SQLAlchemy)
 │   │   ├── database.py               # 🆕 PostgreSQL connection
@@ -63,9 +61,6 @@ saas_llm/
 │   │   ├── usr_119488/
 │   │   └── usr_229571/
 │   │
-│   ├── models/                       # LLM model (shared)
-│   │   └── llm_model/
-│   │
 │   ├── static/
 │   │   └── chatbot.js                # 🆕 Embed script
 │   │
@@ -75,21 +70,29 @@ saas_llm/
 └── frontend/                         # React Dashboard
     ├── public/
     ├── src/
-    │   ├── pages/
-    │   │   ├── Login.jsx             # 🆕
-    │   │   ├── Register.jsx          # 🆕
-    │   │   ├── Dashboard.jsx         # 🆕
-    │   │   ├── FAQManager.jsx        # 🆕
-    │   │   ├── Documents.jsx         # 🆕
-    │   │   ├── EmbedCode.jsx         # 🆕
-    │   │   └── Analytics.jsx         # 🆕
-    │   ├── components/
-    │   │   ├── Navbar.jsx            # 🆕
-    │   │   └── ProtectedRoute.jsx    # 🆕
-    │   ├── api/
-    │   │   └── axios.js              # 🆕 API calls
-    │   └── App.jsx
+    │   ├── app/
+    │   ├     ├── guards/
+    │   ├     |     ├── admin.guard.ts
+    │   ├     |     ├── auth.guard.ts
+    │   ├     |     
+    │   ├     ├── interceptors
+    │   ├     ├     |── jwt.interceptor.ts
+    │   ├     ├
+    │   ├     ├── pages/
+    │   ├     |     ├──admin/
+    │   ├     |     |   ├──admin-chats.component.ts
+    │   ├     |     |   ├──admin-dashboard.component.ts
+    │   ├     |     |   ├──admin-overview.component.ts
+    │   ├     |     |   ├──admin-user-detail.component.ts
+    │   ├     |     |   ├──admin-users.component.ts
+    │   ├     |     ├
+    │   ├     |     ├──login/
+    │   ├     ├     |── services/
+    │   ├     ├     |── app.component.ts
+    │   ├── environments/
+    │   ├── index.html
     └── package.json
+
 Give me code step by step with each file name and structure wise and use 100% free & open-source service.
 
 
@@ -97,6 +100,10 @@ Give me code step by step with each file name and structure wise and use 100% fr
 
 # 0. activate virtual enviornment
 venv\Scripts\activate
+
+python3 -m venv venv
+source venv/bin/activate
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker run_server:app \--bind 127.0.0.1:8000
 
 # 1. Install dependencies
 pip install -r requirements.txt
