@@ -12,7 +12,7 @@ import { ApiService } from '../../services/api.service';
         <h2>📄 Documents</h2>
         <label class="btn-upload">
           📤 Upload Document
-          <input type="file" accept=".txt,.pdf,.docx" (change)="onFileSelect($event)" hidden>
+          <input type="file" accept=".txt,.pdf,.docx,.xlsx,.csv" (change)="onFileSelect($event)" hidden>
         </label>
       </div>
 
@@ -67,19 +67,22 @@ import { ApiService } from '../../services/api.service';
   `]
 })
 export class DocumentsComponent implements OnInit {
-  docs      : any[] = [];
-  loading   = false;
+  docs: any[] = [];
+  loading = false;
   uploading = false;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) { }
 
   ngOnInit() { this.loadDocs(); }
 
   loadDocs() {
     this.loading = true;
     this.api.getDocuments().subscribe({
-      next: (data) => { this.docs = data; this.loading = false; },
-      error: ()    => { this.loading = false; }
+      next: (res: any) => {
+        this.docs = res?.data ?? res;
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
     });
   }
 
@@ -89,7 +92,10 @@ export class DocumentsComponent implements OnInit {
     this.uploading = true;
     this.api.uploadDocument(file).subscribe({
       next: () => { this.uploading = false; this.loadDocs(); },
-      error: () => { this.uploading = false; }
+      error: (error: any) => {
+        alert(error.error.errors[0]);
+        this.uploading = false;
+      }
     });
   }
 

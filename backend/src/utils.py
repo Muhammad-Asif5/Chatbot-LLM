@@ -58,7 +58,7 @@ def detect_language(text: str) -> str:
     except Exception:
         return "en"
 
-def translate_to_english(text: str, source_lang: str) -> str:
+def translate_to_english(text: str, source_lang: str = None) -> str: # type: ignore
     """
     Translate text to English.
     If source is already English or empty, return as-is.
@@ -66,14 +66,17 @@ def translate_to_english(text: str, source_lang: str) -> str:
     if not text or not text.strip():
         return text
     
-    # Normalize language code
-    source_lang = source_lang.lower()[:2] if source_lang else "en"
+    # Auto-detect if not provided
+    if not source_lang:
+        source_lang = detect_language(text)
+    else:
+        source_lang = source_lang.lower()[:2]
     
-    # Already English - no translation needed
+    # Already English
     if source_lang == "en":
         return text
     
-    print(f"[Translate] {source_lang} → en: '{text[:50]}...'")
+    print(f"[Translate] {source_lang} → en: '{text[:50]}...'")    
     translator = get_translator()
     result = translator.translate_to_english(text, source_lang)
     

@@ -11,12 +11,21 @@ import { ApiService } from '../../services/api.service';
     <div class="page">
       <div class="page-header">
         <h2>❓ FAQ Manager</h2>
-        <button (click)="showForm = !showForm" class="btn-add">
-          {{ showForm ? '✕ Cancel' : '+ Add FAQ' }}
-        </button>
+        <div class="header-actions">
+          <button
+            *ngIf="faqs.length > 0"
+            (click)="deleteAllFaqs()"
+            class="btn-delete-all"
+            [disabled]="deletingAll">
+            {{ deletingAll ? '🗑️ Deleting...' : '🗑️ Delete All' }}
+          </button>
+          <button (click)="showForm = !showForm" class="btn-add">
+            {{ showForm ? '✕ Cancel' : '+ Add FAQ' }}
+          </button>
+        </div>
       </div>
 
-      <!-- Add Form -->
+      <!-- Add / Edit Form -->
       <div *ngIf="showForm" class="card form-card">
         <h3>{{ editId ? 'Edit FAQ' : 'Add New FAQ' }}</h3>
         <div class="form-group">
@@ -65,6 +74,7 @@ import { ApiService } from '../../services/api.service';
       align-items: center; margin-bottom: 24px;
     }
     h2 { color: white; font-size: 22px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
     .card {
       background: #16213e; border-radius: 12px;
       padding: 24px; margin-bottom: 20px;
@@ -89,6 +99,13 @@ import { ApiService } from '../../services/api.service';
       padding: 10px 20px; background: #e94560; color: white;
       border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
     }
+    .btn-delete-all {
+      padding: 10px 20px; background: transparent; color: #e94560;
+      border: 1px solid #e94560; border-radius: 8px; cursor: pointer;
+      font-size: 14px; transition: background 0.2s;
+    }
+    .btn-delete-all:hover { background: rgba(233,69,96,0.15); }
+    .btn-delete-all:disabled { opacity: 0.5; cursor: not-allowed; }
     .faq-item {
       display: flex; justify-content: space-between; align-items: flex-start;
       padding: 16px 0; border-bottom: 1px solid #0f3460;
@@ -108,12 +125,13 @@ import { ApiService } from '../../services/api.service';
   `]
 })
 export class FaqManagerComponent implements OnInit {
-  faqs     : any[] = [];
-  loading  = false;
-  saving   = false;
-  showForm = false;
-  editId   : number | null = null;
-  form     = { question: '', answer: '', category: 'general' };
+  faqs        : any[] = [];
+  loading     = false;
+  saving      = false;
+  deletingAll = false;
+  showForm    = false;
+  editId      : number | null = null;
+  form        = { question: '', answer: '', category: 'general' };
 
   constructor(private api: ApiService) {}
 
@@ -122,8 +140,10 @@ export class FaqManagerComponent implements OnInit {
   loadFaqs() {
     this.loading = true;
     this.api.getFaqs().subscribe({
-      next: (data) => { this.faqs = data; this.loading = false; },
-      error: ()    => { this.loading = false; }
+      next: (res: any) => { 
+        this.faqs = res?.data ?? res; this.loading = false; 
+      },
+      error: ()        => { this.loading = false; }
     });
   }
 
@@ -156,5 +176,14 @@ export class FaqManagerComponent implements OnInit {
   deleteFaq(id: number) {
     if (!confirm('Delete this FAQ?')) return;
     this.api.deleteFaq(id).subscribe(() => this.loadFaqs());
+  }
+
+  deleteAllFaqs() {
+    if (!confirm(`Delete ALL ${this.faqs.length} FAQs? This cannot be undone.`)) return;
+    this.deletingAll = true;
+    this.api.deleteAllFaqs().subscribe({
+      next: () => { this.deletingAll = false; this.loadFaqs(); },
+      error: () => { this.deletingAll = false; }
+    });
   }
 }

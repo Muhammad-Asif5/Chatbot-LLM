@@ -217,6 +217,25 @@ def query(user_id: str, user_input: str, target_lang: str = "auto") -> dict:
     
     print(f"[Query] English answer: '{english_answer[:100]}...'")
 
+    # ── Step 5b: Clean answer — strip any leaked markdown ──
+    # Even if a raw KB chunk slips through, the user should
+    # never see **bold**, --- rules, or **User:**/**Bot:** labels.
+    import re as _re
+    def _clean_answer(t: str) -> str:
+        t = _re.sub(r'^[-*_]{3,}\s*$', '', t, flags=_re.MULTILINE)
+        t = _re.sub(r'^#{1,6}\s+', '', t, flags=_re.MULTILINE)
+        t = _re.sub(r'\*{1,2}([^*]+)\*{1,2}', r'\1', t)
+        t = _re.sub(r'_{1,2}([^_]+)_{1,2}', r'\1', t)
+        t = _re.sub(r'\*\*(User|Bot):\*\*\s*', '', t, flags=_re.IGNORECASE)
+        t = _re.sub(r'^(User|Bot):\s*', '', t, flags=_re.MULTILINE | _re.IGNORECASE)
+        # If answer still contains a **Bot:** pattern, extract just the bot reply
+        bot_match = _re.search(r'(?:Bot:|\*\*Bot:\*\*)\s*(.+?)(?=\n\s*---|\n\s*\*\*User|$)', t, _re.DOTALL | _re.IGNORECASE)
+        if bot_match:
+            t = bot_match.group(1)
+        t = _re.sub(r'\n{3,}', '\n', t)
+        return t.strip()
+    english_answer = _clean_answer(english_answer)
+
     # ── Step 6: Translate answer to target language ───────
     if answer_lang != "en":
         final_answer = translate_from_english(english_answer, answer_lang)

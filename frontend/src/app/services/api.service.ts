@@ -26,6 +26,10 @@ export class ApiService {
     return this.http.delete(`${this.apiUrl}/api/faqs/${id}`);
   }
 
+  deleteAllFaqs(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/api/faqs/all/`);
+  }
+
   // ── Documents ─────────────────────────────────────────
   getDocuments(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/api/documents/`);

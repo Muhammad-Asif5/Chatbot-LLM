@@ -44,6 +44,21 @@ def get_vector_db_path(user_id: str) -> str:
     os.makedirs(path, exist_ok=True)
     return f"{path}/vector_db.pkl"
 
+# ── MARKDOWN STRIPPER ────────────────────────────────────
+def _strip_markdown(text: str) -> str:
+    """Remove markdown so clean plain text is stored in vector DB."""
+    text = re.sub(r'^[-*_]{3,}\s*$', '', text, flags=re.MULTILINE)   # horizontal rules
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)        # headers
+    text = re.sub(r'\*{1,2}([^*]+)\*{1,2}', r'\1', text)            # bold/italic
+    text = re.sub(r'_{1,2}([^_]+)_{1,2}', r'\1', text)                # _italic_
+    text = re.sub(r'`([^`]*)`', r'\1', text)                          # inline code
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)         # links
+    text = re.sub(r'^[\s]*[-*]\s+', '', text, flags=re.MULTILINE)    # bullet lists
+    text = re.sub(r'^(User|Bot):\s*', '', text,                       # example labels
+                  flags=re.MULTILINE | re.IGNORECASE)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 def build_vector_db(
     user_id:        str,
     faqs:           list[dict],
@@ -91,23 +106,54 @@ def build_vector_db(
                 "category": doc["filename"]
             })
 
-    # 3. Knowledge Base ← Naya
+    # 3. Knowledge Base
     for kb in knowledge_base:
         raw_content = kb["content"]
 
-        # ── Markdown headers se split karo ───────────
+        # ── Extract Q&A pairs from Example Conversations blocks ──
+        # Handles blocks like:
+        #   ### Example 1: Title
+        #   **User:** question text
+        #   **Bot:** answer text
+        example_pairs = re.findall(
+            r'\*\*User:\*\*\s*(.+?)\s*\s*\*\*Bot:\*\*\s*(.+?)(?=\s*---|$|\s*###|\s*\*\*User)',
+            raw_content,
+            re.DOTALL
+        )
+        for user_q, bot_a in example_pairs:
+            user_q = _strip_markdown(user_q.strip())
+            bot_a  = _strip_markdown(bot_a.strip())
+            if user_q and bot_a and len(bot_a) > 4:
+                entries.append({
+                    "text":     f"{user_q} {bot_a}",
+                    "question": user_q,
+                    "answer":   bot_a,
+                    "source":   "knowledge_base",
+                    "category": kb["title"]
+                })
 
-        sections = re.split(r'\n(?=#{1,3} )', raw_content)
+        # ── Remove the entire Example Conversations section before chunking ──
+        # so those raw markdown blocks don't pollute other chunks
+        content_for_chunks = re.sub(
+            r'#{1,3}[^\n]*[Ee]xample[^\n]*\n.*?(?=\n#{1,3} |\Z)',
+            '',
+            raw_content,
+            flags=re.DOTALL
+        ).strip()
+
+        # ── Split on markdown headers ─────────────────────────
+        sections = re.split(r'\n(?=#{1,3} )', content_for_chunks)
         sections = [s.strip() for s in sections if len(s.strip()) > 10]
 
-        # ── Fallback: double newline ──────────────────
+        # ── Fallback: double newline ──────────────────────────
         if len(sections) <= 1:
-            sections = [s.strip() for s in raw_content.split('\n\n') if len(s.strip()) > 10]
+            sections = [s.strip() for s in content_for_chunks.split('\n\n') if len(s.strip()) > 10]
 
         for section in sections:
-            # Markdown headers clean karo
-            clean_section = re.sub(r'^#{1,3} ', '', section, flags=re.MULTILINE)
-            lines         = clean_section.split('\n')
+            clean_section = _strip_markdown(section)
+            lines         = [l for l in clean_section.split('\n') if l.strip()]
+            if not lines:
+                continue
             question_part = lines[0].strip()
             answer_part   = ' '.join(lines[1:]).strip() if len(lines) > 1 else question_part
 
@@ -119,7 +165,7 @@ def build_vector_db(
                 "category": kb["title"]
             })
 
-        print(f"[Embedding] KB '{kb['title']}': {len(sections)} chunks")
+        print(f"[Embedding] KB '{kb['title']}': {len(sections)} chunks + {len(example_pairs)} example pairs")
 
     if not entries:
         print(f"[Embedding] No data for user {user_id}")
