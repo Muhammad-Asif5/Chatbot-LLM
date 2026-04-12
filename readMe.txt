@@ -103,6 +103,7 @@ venv\Scripts\activate
 
 python3 -m venv venv
 source venv/bin/activate
+python seed_admin.py
 gunicorn -w 4 -k uvicorn.workers.UvicornWorker run_server:app \--bind 127.0.0.1:8000
 
 # 1. Install dependencies
