@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 from src.database import get_db
 from src.models import User, ChatLog
-from src.inference import query as run_query, summarize
+from src.inference import query as run_query
 from core.response import success_response
 
 router = APIRouter(prefix="/widget", tags=["Widget"])
@@ -18,13 +18,16 @@ class WidgetQueryRequest(BaseModel):
     # ✅ FIXED: "en" → "auto"
     # Old default "en" bypassed ALL language detection in inference.py
     # "auto" tells the pipeline to detect language from the message itself
-    language: Optional[str] = "en"
+    language: Optional[str] = "auto"
+    style: Optional[Literal["simple", "technical", "detailed"]] = "simple"
+
 
 @router.post("/query")
 def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     """
-    Public endpoint — website embed ke liye.
-    owner_id se user validate karo aur answer do.
+    Public endpoint — website embed.
+    Passes `db` into run_query() so inference.py reuses this session
+    for get_system_prompt() instead of competing for a new pool connection.
     """
     user = db.query(User).filter(User.id == req.owner_id).first()
     if not user:
@@ -33,14 +36,16 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
             detail=f"User with id {req.owner_id} not found."
         )
 
-    # ✅ Normalize: treat "en" sent from frontend as "auto" too
-    # Some frontends hardcode language="en" — this ensures detection still runs
-    target_lang = req.language if req.language else "auto"
+    target_lang = req.language if req.language and req.language != "en" else "auto"
 
+    # ✅ Pass db= so inference reuses this connection (fixes 30s pool timeout)
     result = run_query(
-        user_id    = req.owner_id,
-        user_input = req.question,
-        target_lang       = target_lang
+        user_id     = req.owner_id,
+        user_input  = req.question,
+        target_lang = target_lang,
+        style       = req.style or "simple",
+        mode        ="human",
+        db          = db,
     )
     
     print(f"\n\n📝Step Final - Query result: {result}")
@@ -56,23 +61,23 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return success_response(
-        data=result,
-        message="Query processed successfully",
-        status_code=status.HTTP_200_OK
+        data        = result,
+        message     = "Query processed successfully",
+        status_code = status.HTTP_200_OK
     )
 
-@router.post("/summarize")
-def summarize_text(req: SummarizeRequest):
-    if not req.text.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Text cannot be empty"
-        )
-    try:
-        summary = summarize(req.text)
-        return {"summary": summary}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+# @router.post("/summarize")
+# def summarize_text(req: SummarizeRequest):
+#     if not req.text.strip():
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Text cannot be empty",
+#         )
+#     try:
+#         summary = summarize(req.text)
+#         return {"summary": summary}
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=str(e),
+#         )

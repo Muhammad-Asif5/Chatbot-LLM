@@ -77,7 +77,7 @@ export class EmbedCodeComponent {
   userId   : string = '';
   copied   = false;
   embedCode: string = '';
-  baseUrl: string = environment.production ? 'https://chatbot.vstschool.com' : 'http://localhost:8000';
+  baseUrl: string = environment.production ? 'https://chatbot.vstschool.com' : 'http://localhost:8000/api';
 
   constructor(private auth: AuthService) {
 

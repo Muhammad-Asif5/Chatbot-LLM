@@ -27,3 +27,6 @@ python-docx>=1.0.0              # For Word docs
 sentencepiece>=0.1.99           # Required for MarianMT tokenizers
 openpyxl
 gunicorn
+peft>=0.7.0              # LoRA fine-tuning for Mistral/Llama
+bitsandbytes>=0.41.0     # 4-bit quantization
+pymupdf                  # better PDF parsing (replaces PyMDF2 for fitz)

@@ -19,9 +19,10 @@ export const routes: Routes = [
       { path: 'faqs',      loadComponent: () => import('./pages/faq-manager/faq-manager.component').then(m => m.FaqManagerComponent) },
       { path: 'documents', loadComponent: () => import('./pages/documents/documents.component').then(m => m.DocumentsComponent) },
       { path: 'knowledge', loadComponent: () => import('./pages/knowledge/knowledge.component').then(m => m.KnowledgeComponent) },
+      { path: 'model',     loadComponent: () => import('./pages/model-selector.component').then(m => m.ModelSelectorComponent) },
       { path: 'embed',     loadComponent: () => import('./pages/embed-code/embed-code.component').then(m => m.EmbedCodeComponent) },
       { path: 'analytics', loadComponent: () => import('./pages/analytics/analytics.component').then(m => m.AnalyticsComponent) },
-    ]
+    ],
   },
 
   // ── Admin Panel ───────────────────────────────────
@@ -30,13 +31,13 @@ export const routes: Routes = [
     canActivate: [AuthGuard, AdminGuard],
     loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
     children: [
-      { path: '',               redirectTo: 'overview', pathMatch: 'full' },
-      { path: 'overview',       loadComponent: () => import('./pages/admin/admin-overview.component').then(m => m.AdminOverviewComponent) },
-      { path: 'users',          loadComponent: () => import('./pages/admin/admin-users.component').then(m => m.AdminUsersComponent) },
-      { path: 'users/:id',      loadComponent: () => import('./pages/admin/admin-user-detail.component').then(m => m.AdminUserDetailComponent) },
-      { path: 'chats',          loadComponent: () => import('./pages/admin/admin-chats.component').then(m => m.AdminChatsComponent) },
-    ]
+      { path: '',          redirectTo: 'overview', pathMatch: 'full' },
+      { path: 'overview',  loadComponent: () => import('./pages/admin/admin-overview.component').then(m => m.AdminOverviewComponent) },
+      { path: 'users',     loadComponent: () => import('./pages/admin/admin-users.component').then(m => m.AdminUsersComponent) },
+      { path: 'users/:id', loadComponent: () => import('./pages/admin/admin-user-detail.component').then(m => m.AdminUserDetailComponent) },
+      { path: 'chats',     loadComponent: () => import('./pages/admin/admin-chats.component').then(m => m.AdminChatsComponent) },
+    ],
   },
 
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: 'login' },
 ];

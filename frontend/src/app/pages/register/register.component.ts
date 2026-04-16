@@ -85,7 +85,7 @@ export class RegisterComponent {
     if (this.auth.isLoggedIn()) {
       this.router.navigate(['/dashboard']);
     }else{
-      this.router.navigate(['/login']);
+      this.router.navigate(['/register']);
     }
   }
   

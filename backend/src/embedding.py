@@ -31,12 +31,25 @@ def get_model_path() -> str:
             path = os.path.join(CACHE_DIR, snapshots[0])
             print(f"[Embedding] Local model found: {path}")
             return path
-    print(f"[Embedding] Cache not found, using model name: {EMBED_MODEL_NAME}")
+    print(f"[Embedding] Cache not found — will download: {EMBED_MODEL_NAME}")
     return EMBED_MODEL_NAME
-	 
+
 MODEL_LOCAL_PATH = get_model_path()
-embedder = SentenceTransformer(MODEL_LOCAL_PATH, local_files_only=True)
-   
+
+# ✅ Only use local_files_only=True if the model is already cached
+_is_cached = os.path.exists(CACHE_DIR) and bool(os.listdir(CACHE_DIR))
+
+# Temporarily allow online download if not cached
+if not _is_cached:
+    os.environ.pop("TRANSFORMERS_OFFLINE", None)
+    os.environ.pop("HF_HUB_OFFLINE", None)
+
+embedder = SentenceTransformer(MODEL_LOCAL_PATH, local_files_only=_is_cached)
+
+# Restore offline mode after load
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
+
 # ── BUILD VECTOR DB ──────────────────────────────────────
 def get_vector_db_path(user_id: str) -> str:
     """Per user vector DB path."""
