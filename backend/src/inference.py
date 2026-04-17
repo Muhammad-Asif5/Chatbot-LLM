@@ -57,7 +57,6 @@ def _get_model(model_name: str):
     if model_name in _model_cache:
         return _model_cache[model_name]
 
-    from src.model_config import CPU_SAFE_MODELS
     path     = MODEL_PATHS.get(model_name, MODEL_PATHS["flan-t5-large"])
     is_local = os.path.exists(path)
 
@@ -96,8 +95,7 @@ def _get_model(model_name: str):
     elif model_name in ("phi-3-mini", "gemma-2b"):
         model = AutoModelForCausalLM.from_pretrained(
             path,
-            # torch_dtype      = torch.float32,   # float32 for CPU
-            dtype      = torch.float32,   # float32 for CPU
+            torch_dtype      = torch.float32,   # float32 for CPU
             device_map        = "cpu",
             local_files_only  = is_local,
             trust_remote_code = True,
