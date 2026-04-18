@@ -77,12 +77,12 @@ export class EmbedCodeComponent {
   userId   : string = '';
   copied   = false;
   embedCode: string = '';
-  baseUrl: string = environment.production ? 'https://chatbot.vstschool.com' : 'http://localhost:8000/api';
+  baseUrl: string = environment.production ? environment.apiUrl : environment.apiUrl;
 
   constructor(private auth: AuthService) {
 
     this.userId    = this.auth.getCurrentUser()?.id || '';
-    this.embedCode = `<script\n  src="${this.baseUrl}/static/chatbot.js"\n  data-owner-id="${this.userId}"\n  data-api="${this.baseUrl}/api">\n<\/script>`;
+    this.embedCode = `<script\n  src="${this.baseUrl}/static/chatbot.js"\n  data-owner-id="${this.userId}"\n  data-api="${this.baseUrl}/docs">\n<\/script>`;
   }
 
   copy() {

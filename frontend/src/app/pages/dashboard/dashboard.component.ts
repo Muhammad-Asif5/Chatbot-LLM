@@ -21,12 +21,12 @@ import { AuthService } from '../../services/auth.service';
         </div>
 
         <nav>
-          <a routerLink="faqs"      routerLinkActive="active"><span>❓</span> FAQs</a>
-          <a routerLink="documents" routerLinkActive="active"><span>📄</span> Documents</a>
-          <a routerLink="knowledge" routerLinkActive="active"><span>📝</span> Knowledge Base</a>
+          <a routerLink="analytics" routerLinkActive="active"><span>📊</span> Analytics</a>
           <a routerLink="model"     routerLinkActive="active"><span>🤖</span> AI Model</a>
           <a routerLink="embed"     routerLinkActive="active"><span>🔗</span> Embed Code</a>
-          <a routerLink="analytics" routerLinkActive="active"><span>📊</span> Analytics</a>
+          <a routerLink="faqs"      routerLinkActive="active"><span>❓</span> FAQs</a>
+          <a routerLink="documents" routerLinkActive="active"><span>📄</span> Documents</a>
+          <a routerLink="knowledge" routerLinkActive="active"><span>📝</span> Knowledge Base</a>          
         </nav>
 
         <!-- Admin shortcut — only for admins -->

@@ -16,12 +16,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
     children: [
       { path: '',          redirectTo: 'faqs', pathMatch: 'full' },
+      { path: 'analytics', loadComponent: () => import('./pages/analytics/analytics.component').then(m => m.AnalyticsComponent) },
       { path: 'faqs',      loadComponent: () => import('./pages/faq-manager/faq-manager.component').then(m => m.FaqManagerComponent) },
       { path: 'documents', loadComponent: () => import('./pages/documents/documents.component').then(m => m.DocumentsComponent) },
       { path: 'knowledge', loadComponent: () => import('./pages/knowledge/knowledge.component').then(m => m.KnowledgeComponent) },
       { path: 'model',     loadComponent: () => import('./pages/model-selector.component').then(m => m.ModelSelectorComponent) },
-      { path: 'embed',     loadComponent: () => import('./pages/embed-code/embed-code.component').then(m => m.EmbedCodeComponent) },
-      { path: 'analytics', loadComponent: () => import('./pages/analytics/analytics.component').then(m => m.AnalyticsComponent) },
+      { path: 'embed',     loadComponent: () => import('./pages/embed-code/embed-code.component').then(m => m.EmbedCodeComponent) }
     ],
   },
 
