@@ -30,3 +30,4 @@ gunicorn
 peft>=0.7.0              # LoRA fine-tuning for Mistral/Llama
 bitsandbytes>=0.41.0     # 4-bit quantization
 pymupdf                  # better PDF parsing (replaces PyMDF2 for fitz)
+aiohttp>=3.9.0           # Async HTTP client for API calls

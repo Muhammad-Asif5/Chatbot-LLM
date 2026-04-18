@@ -57,16 +57,17 @@ def _get_model(model_name: str):
     if model_name in _model_cache:
         return _model_cache[model_name]
 
-    path     = MODEL_PATHS.get(model_name, MODEL_PATHS["flan-t5-large"])
-    is_local = os.path.exists(path)
+    hf_repo, local_path = MODEL_PATHS.get(model_name, MODEL_PATHS["flan-t5-large"])
+    is_local = os.path.exists(local_path)
 
     if not is_local:
         os.environ.pop("TRANSFORMERS_OFFLINE", None)
         os.environ.pop("HF_HUB_OFFLINE",       None)
 
-    print(f"[Model] Loading '{model_name}' from {path} …")
+    print(f"[Model] Loading '{model_name}' from {local_path if is_local else hf_repo} …")
     has_gpu   = torch.cuda.is_available()
     device    = "cuda" if has_gpu else "cpu"
+    path = local_path if is_local else hf_repo
     tokenizer = AutoTokenizer.from_pretrained(path, local_files_only=is_local)
 
     # ── GPU-only models (Mistral / Llama) ─────────────────
@@ -118,162 +119,15 @@ def _get_model(model_name: str):
     print(f"[Model] '{model_name}' ready on {device}")
     return _model_cache[model_name]
 
-
-# ── Noise detector ────────────────────────────────────────
-# Patterns that identify system log / import messages that
-# should never be treated as real knowledge-base content.
-_NOISE_PATTERNS = [
-    r"^\[FAQ Import\]",
-    r"^\[.*?Import\]",
-    r"^\[.*?Error\]",
-    r"^\[.*?Warning\]",
-    r"\d+\s+(FAQs?|items?|records?)\s+imported",
-    r"skipped from ['\"]",
-    r"^\[.*?\]\s+\d+",          # generic bracketed-tag + number log lines
-]
-
-def _is_noise(text: str) -> bool:
-    """
-    Returns True if *text* looks like a system/import log message
-    rather than real knowledge-base content.
-    """
-    if not text or len(text.strip()) < 10:
-        return True
-    for pattern in _NOISE_PATTERNS:
-        if re.search(pattern, text, re.IGNORECASE):
-            return True
-    return False
-
-
-# ── System-prompt loader ──────────────────────────────────
-def _get_system_prompt(user_id: str, db) -> str:
-    """
-    Load the custom system prompt from the owner's Knowledge Base.
-    Looks for an article whose title starts with 'System Prompt'
-    (case-insensitive). Falls back to a sensible default if none found.
-    """
-    if db is None:
-        return ""
-    try:
-        from src.models import KnowledgeBase, FAQ
-        kb = (
-            db.query(KnowledgeBase)
-            .filter(
-                KnowledgeBase.user_id == user_id,
-                KnowledgeBase.title.ilike("system prompt%"),
-            )
-            .first()
-        )
-        # Case 1: KnowledgeBase exists
-        if kb and hasattr(kb, "content"):
-            print(f"[Inference] System prompt KB row found - {kb}")
-            return kb.content.strip() if kb.content else ""
-        
-        # Case 2: fallback to FAQ answers (SQLite group_concat)
-        answers = (
-            db.query(func.group_concat(FAQ.answer, ", "))
-            .filter(FAQ.user_id == user_id)
-            .scalar()
-        )
-
-        print(f"[Inference] System prompt from FAQ: {answers}")
-
-        return answers.strip() if answers else ""
-        
-    except Exception as e:
-        print(f"[Inference] Could not load system prompt: {e}")
-        return ""
-
-
-# ── Context builder ───────────────────────────────────────
-def _build_context(search_results: list[dict]) -> str:
-    """
-    Build a deduplicated context string from vector-search results.
-
-    Filters out:
-      - Noise / system-log entries (import messages, error lines, etc.)
-      - Results whose answer field is empty or too short to be useful
-      - Duplicate answers (keyed on first 80 chars)
-
-    Returns an empty string when no valid content survives — the caller
-    must handle this case and return NOT_FOUND_MESSAGE instead of
-    passing empty context to the LLM.
-    """
-    seen, context = set(), []
-
-    for r in search_results:
-        answer   = (r.get("answer")   or "").strip()
-        question = (r.get("question") or "").strip()
-
-        print(f"[Context] Evaluating result: '{answer[:80]}'")
-
-        # Skip noise in either field
-        if _is_noise(answer) or _is_noise(question):
-            print(f"[Context] Skipping noise entry: '{answer[:60]}'")
-            continue
-
-        # Skip suspiciously short answers
-        if len(answer) < 10:
-            print(f"[Context] Skipping too-short answer: '{answer}'")
-            continue
-
-        key = answer[:80]
-        if key in seen:
-            print(f"[Context] Skipping duplicate: '{key}'")
-            continue
-
-        seen.add(key)
-        context.append(f"- {answer}")
-
-        if len("\n".join(context)) > 600:
-            break
-
-    print(f"Step 6 {context} ")
-    print(f"Step 7 {search_results} ")
-
-    return "\n".join(context)
-
-
-# ── Prompt builder ────────────────────────────────────────
-def _build_prompt(model_name, question, context, style, sys_prompt):
-    style_map = {
-        "simple":    "Use simple, clear language. Be brief and direct.",
-        "technical": "Use technical language and precise details.",
-        "detailed":  "Give a thorough, structured explanation.",
-    }
-    style_hint       = style_map.get(style, style_map["simple"])
-    base_instruction = sys_prompt or "You are a helpful customer support assistant."
-
-    # Causal LM models (phi-3, gemma, mistral, llama)
-    if model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini", "gemma-2b"):
-        return (
-            f"<s>[INST] {base_instruction}\n"
-            f"{style_hint}\n"
-            f"Use ONLY the context below. "
-            f"If the answer is not there, say so clearly.\n\n"
-            f"Context:\n{context}\n\n"
-            f"Question: {question} [/INST]"
-        )
-    else:
-        return (
-            f"{base_instruction}\n{style_hint}\n"
-            f"Use ONLY the context below to answer. "
-            f"If the answer cannot be found in the context, "
-            f"respond with: 'I don't have information about that.'\n\n"
-            f"Context:\n{context}\n\n"
-            f"Question: {question}\n\nAnswer:"
-        )
-
-
 # ── Conversational rephrase prompt (human mode) ───────────
-def _build_rephrase_prompt(model_name, question, raw_answer, sys_prompt):
+def _build_rephrase_prompt(model_name, question, raw_answer):
     """
     Build a prompt that instructs the LLM to reword a known FAQ answer
     in a warm, conversational tone — without inventing new information.
     The raw_answer is passed as the sole source of truth so the model
     cannot hallucinate beyond what the KB already contains.
     """
-    base_instruction = sys_prompt or "You are a friendly customer support assistant."
+    base_instruction = "You are a friendly customer support assistant."
 
     if model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini", "gemma-2b"):
         return (
@@ -284,70 +138,69 @@ def _build_rephrase_prompt(model_name, question, raw_answer, sys_prompt):
             f"Customer question: {question} [/INST]"
         )
     else:
-        # Flan-T5 and other seq2seq models.
-        # A single clear instruction verb works far better than
-        # a list of "Do NOT" rules, which cause Flan-T5 to echo input.
-        # return (
-        #     f"Rewrite the following customer support answer in a warm, "
-        #     f"friendly, and conversational tone. "
-        #     f"Only use the information already in the answer.\n\n"
-        #     f"Customer question: {question}\n\n"
-        #     f"Original answer: {raw_answer}\n\n"
-        #     f"Friendly reply:"
-        # )
+        opener = "Sure! "
         return (
-            f"Rewrite this answer to sound friendly and conversational:\n\n"
+            f"Paraphrase the following answer to the customer's question "
+            f"in a warm, conversational tone. Start your reply with '{opener}'.\n\n"
+            f"Question: {question}\n"
             f"Answer: {raw_answer}\n\n"
-            f"Friendly version:"
+            f"Conversational reply: {opener}"
         )
 
-import os, requests
-def _rephrase_via_api(question: str, raw_answer: str, sys_prompt: str) -> str | None:
+def _safe_rephrase(generated: str, raw_answer: str) -> str:
     """
-    Use the Anthropic API to rephrase a raw FAQ answer conversationally.
-    Returns None on failure so the caller can fall back to raw_answer.
+    Validate the LLM-generated rephrasing.
+    Falls back to a conversational wrap of the raw answer (never bare FAQ text).
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return None
+    # Conversational fallback — always sounds human even on LLM failure
+    conversational_fallback = f"{raw_answer}"
 
-    base_instruction = sys_prompt or "You are a friendly customer support assistant."
+    gen = generated.strip()
+    if not gen:
+        print("[SafeRephrase] Step 1 — empty output, using conversational fallback")
+        return conversational_fallback
 
-    try:
-        resp = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key":         api_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type":      "application/json",
-            },
-            json={
-                "model":      "claude-haiku-4-5-20251001",   # fast + cheap
-                "max_tokens": 300,
-                "system":     base_instruction,
-                "messages": [{
-                    "role":    "user",
-                    "content": (
-                        f"Rewrite the following support answer in a warm, "
-                        f"conversational tone. Use only the information given — "
-                        f"do not add anything new.\n\n"
-                        f"Customer question: {question}\n\n"
-                        f"Support answer to rephrase:\n{raw_answer}"
-                    ),
-                }],
-            },
-            timeout=15,
-        )
-        resp.raise_for_status()
-        return resp.json()["content"][0]["text"].strip()
-    except Exception as e:
-        print(f"[Inference] API rephrase failed: {e}")
-        return None
+    if gen.endswith("?"):
+        # Model drifted into a question — strip trailing sentence and keep the rest
+        sentences = re.split(r'(?<=[.!])\s+', gen)
+        sentences = [s for s in sentences if not s.strip().endswith("?")]
+        gen = " ".join(sentences).strip()
+        if not gen:
+            print("[SafeRephrase] Step 2 — only question sentences, using conversational fallback")
+            return conversational_fallback
+
+    if len(gen) < len(raw_answer) * 0.2:
+        print("[SafeRephrase] Step 3 — output too short, using conversational fallback")
+        return conversational_fallback
+
+    # ── Faithfulness check ────────────────────────────────
+    # If the generated text shares almost no content words with the
+    # raw_answer, the model has hallucinated. Fall back to conversational wrap.
+    raw_words = set(raw_answer.lower().split())
+    gen_words = set(gen.lower().split())
+    stopwords = {"the","a","an","is","are","to","of","and","in","it",
+                 "for","that","this","or","with","can","you","your","we"}
+    raw_content = raw_words - stopwords
+    gen_content = gen_words - stopwords
+    if raw_content:
+        print(f"[SafeRephrase] Step 4 — faithfulness check: raw_content={len(raw_content)} words")
+        overlap = len(raw_content & gen_content) / len(raw_content)
+        print(f"[SafeRephrase] Step 4 — overlap={overlap:.2f}")
+        if overlap < 0.15:   # relaxed from 0.25 → 0.15 to reduce false fallbacks
+            print("[SafeRephrase] Step 5 — low overlap (hallucination risk), using conversational fallback")
+            return conversational_fallback
+
+    print(f"[SafeRephrase] Step 6 — rephrased output accepted: '{gen[:80]}...'")
+    return gen
 
 # ── Generator ─────────────────────────────────────────────
 def _generate(model_name: str, prompt: str, style: str) -> str:
+    print(f"[Generate] Model: {model_name}\n\n")
+    print(f"[Generate] Style: {style}\n\n")
+
     tokenizer, model, device = _get_model(model_name)
-    max_new = {"simple": 100, "technical": 180, "detailed": 250}.get(style, 120)
+    max_new = {"simple": 100, "technical": 180, "detailed": 250}.get(style, 120) 
+    print(f"[Generate] device: {device}\n\n")
 
     inputs = tokenizer(
         prompt, return_tensors="pt", truncation=True,
@@ -369,27 +222,18 @@ def _generate(model_name: str, prompt: str, style: str) -> str:
             generated = output[0][inputs["input_ids"].shape[1]:]
             answer    = tokenizer.decode(generated, skip_special_tokens=True)
         else:
-            # Seq2seq (Flan-T5): enable sampling so output is
-            # conversational rather than a beam-search echo of the input.
-            # output = model.generate(
-            #     **inputs,
-            #     max_new_tokens     = max_new, #max(max_new, 150),   # floor at 150 — 100 is too short to rephrase
-            #     do_sample          = True,
-            #     temperature        = 0.75,
-            #     top_p              = 0.92,
-            #     repetition_penalty = 1.2,
-            #     num_beams          = 1,                   # beam search fights sampling; disable it
-            #     early_stopping     = False,
-            # )
+            # In _generate(), for seq2seq path:
             output = model.generate(
                 **inputs,
-                max_new_tokens     = max_new,
+                max_new_tokens     = max(max_new, 150),  # floor at 150 — enough to rephrase naturally
+                min_new_tokens     = 20,                 # prevent ultra-short echoes
                 do_sample          = True,
-                temperature        = 0.7,
-                top_p              = 0.9,
-                repetition_penalty = 1.15,
-                num_beams          = 1,
+                temperature        = 0.7,   # higher = more natural/varied output
+                top_p              = 0.92,
+                repetition_penalty = 1.3,   # stronger penalty prevents input echoing
+                num_beams          = 1,     # beam search fights sampling; keep off
             )
+
             answer = tokenizer.decode(output[0], skip_special_tokens=True)
 
     return answer.strip()
@@ -422,7 +266,6 @@ def _check_plan_limit(user_id: str, plan: str, db) -> bool:
     except Exception as e:
         print(f"[Inference] Plan-limit check failed: {e}")
         return True   # fail open so users are never silently blocked
-
 
 # ── Main entry point ──────────────────────────────────────
 def query(
@@ -491,7 +334,9 @@ def query(
     print(f"[Query] Model: {model_name}")
 
     # ── 3. Vector search (tenant-isolated) ────────────────
-    results    = search_vector_db(user_id, english_input, top_k=5)
+    results    = search_vector_db(user_id, english_input, top_k=3)
+    print(f"[Query] results 1: {results}\n\n")
+   
     best       = results[0] if results else None
     confidence = best["confidence"] if best else "none"
     kb_found   = best is not None and confidence in ("high", "medium")
@@ -507,37 +352,13 @@ def query(
         source         = "not_found"
         print("[Query] Path: not_found (no KB match)")
 
-    elif mode == "fast":
+    elif mode == "fast" and confidence in ("high", "medium"):
         # ── 4b. Fast mode — return raw FAQ answer, no LLM ──
         # Never touches the LLM; does not consume quota.
+        assert best is not None
         english_answer = best["answer"]
         source         = "kb_direct"
-        print("[Query] Path: fast → kb_direct")
-
-    # elif mode == "human":
-    #     # ── 4c. Human mode — LLM rephrases the KB answer ───
-    #     # The raw FAQ answer is the only context given to the
-    #     # LLM, so it cannot hallucinate beyond what the KB says.
-    #     if not _check_plan_limit(user_id, user_plan, db):
-    #         english_answer = (
-    #             "You have reached your daily query limit. "
-    #             "Please upgrade your plan for more queries."
-    #         )
-    #         source = "plan_limit"
-    #         print("[Query] Path: plan_limit")
-
-    #     else:
-    #         sys_prompt     = _get_system_prompt(user_id, db)
-    #         raw_answer     = best["answer"]
-    #         prompt         = _build_rephrase_prompt(
-    #             model_name, english_input, raw_answer, sys_prompt
-    #         )
-    #         print(f'STEP 1 _build_rephrase_prompt - {prompt} \n\n')
-    #         english_answer = _generate(model_name, prompt, style)
-    #         print(f'STEP 2 english_answer - {english_answer} \n\n')
-            
-    #         source         = f"rag_{model_name}"
-    #         print(f"[Query] Path: human → rephrase via {model_name}")
+        print(f"[Query] Path: fast → kb_direct (confidence={confidence})")
 
     elif mode == "human":
         if not _check_plan_limit(user_id, user_plan, db):
@@ -549,22 +370,20 @@ def query(
             print("[Query] Path: plan_limit")
 
         else:
-            sys_prompt = _get_system_prompt(user_id, db)
+            assert best is not None
             raw_answer = best["answer"]
+            print(f"[Query] raw_answer: {raw_answer}")
 
-            # ── Try Anthropic API first (best conversational quality) ──
-            rephrased = _rephrase_via_api(english_input, raw_answer, sys_prompt)
-
-            if rephrased:
-                english_answer = rephrased
-                source         = "rag_api"
-                print("[Query] Path: human → rephrase via Anthropic API")
-            else:
-                # ── Fallback to local LLM if API unavailable ───────────
-                prompt         = _build_rephrase_prompt(model_name, english_input, raw_answer, sys_prompt)
-                english_answer = _generate(model_name, prompt, style)
-                source         = f"rag_{model_name}"
-                print(f"[Query] Path: human → rephrase via {model_name} (API fallback)")
+            prompt         = _build_rephrase_prompt(model_name, english_input, raw_answer)
+            raw_output     = _generate(model_name, prompt, style)
+            english_answer = _safe_rephrase(raw_output, raw_answer)
+            source         = f"rag_{model_name}"
+            print(f"[Query] Path: human → rephrase via {model_name}")
+            print(f"[Query] Prompt sent to model:\n{prompt}")
+            print(f"[Query] Raw KB answer:        {raw_answer}")
+            print(f"[Query] Raw model output:     {raw_output}")
+            print(f"[Query] Final answer:         {english_answer}")
+            print(f"[Query] Source:               {source}")
                 
     else:
         # ── 4d. Unknown mode — safe fallback ───────────────

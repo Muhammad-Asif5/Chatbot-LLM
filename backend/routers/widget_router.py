@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Literal
+import asyncio
 from src.database import get_db
 from src.models import User, ChatLog
 from src.inference import query as run_query
@@ -23,7 +24,7 @@ class WidgetQueryRequest(BaseModel):
 
 
 @router.post("/query")
-def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
+async def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
     """
     Public endpoint — website embed.
     Passes `db` into run_query() so inference.py reuses this session
@@ -36,16 +37,18 @@ def widget_query(req: WidgetQueryRequest, db: Session = Depends(get_db)):
             detail=f"User with id {req.owner_id} not found."
         )
 
-    target_lang = req.language if req.language and req.language != "en" else "auto"
-
-    # ✅ Pass db= so inference reuses this connection (fixes 30s pool timeout)
-    result = run_query(
-        user_id     = req.owner_id,
-        user_input  = req.question,
-        target_lang = target_lang,
-        style       = req.style or "simple",
-        mode        ="human",
-        db          = db,
+    # Run the blocking inference in a thread pool
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: run_query(
+            user_id     = req.owner_id,
+            user_input  = req.question,
+            target_lang = req.language or "auto",
+            style       = req.style or "simple",
+            mode        = "human",
+            db          = db,
+        )
     )
     
     print(f"\n\n📝Step Final - Query result: {result}")

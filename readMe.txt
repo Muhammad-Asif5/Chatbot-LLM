@@ -100,6 +100,7 @@ Give me code step by step with each file name and structure wise and use 100% fr
 
 # 0. activate virtual enviornment
 venv\Scripts\activate
+python run_server.py
 
 python3 -m venv venv
 source venv/bin/activate
