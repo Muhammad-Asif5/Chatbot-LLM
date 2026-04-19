@@ -21,42 +21,103 @@ def clean_text(text: str) -> str:
     text = re.sub(r'[^\w\s.,!?;:\'\"-]', '', text)
     return text
 
+# Language code to full name mapping
+LANGUAGE_NAMES = {
+    "en": "en",
+    "ur": "ur",
+    "fr": "fr",
+    "ar": "ar",
+    "hi": "hi",
+}
+
+# Roman Urdu keywords for detection
+ROMAN_URDU_KEYWORDS = {
+    # Pronouns
+    "kia", "hai", "ha", "hain", "haal", "ap", "aap", "tum", "main", "mein",
+    "kaise", "kaisa", "kaisi", "theek", "thik", "accha", "acha", "nahi",
+    "nahin", "haan", "han", "bhai", "yaar", "matlab", "kyu", "kyun", "kyon",
+    "kab", "kahan", "kaun", "kon", "kuch", "sab", "bara", "bura", "aur",
+    "lekin", "magar", "phir", "kal", "aaj", "abhi", "jab", "tab",
+    "woh", "wo", "yeh", "ye", "iska", "uska", "mera", "tera", "humara",
+    "tumhara", "unka", "mere", "tere", "dekho", "suno", "bolo", "jao",
+    "jana", "ana", "khana", "peena", "rehna", "chalo", "chalein", "zaroor",
+    "bilkul", "shayad", "lagta", "chahiye", "milna", "dost", "pyaar",
+    "zindagi", "duniya", "waqt", "ghar", "kaam", "paise", "masla",
+    "sahi", "galat", "mushkil", "asaan", "zyada", "thora", "bohot", "bahut",
+
+    # ✅ NEW: Common verbs & conjugations
+    "aya", "ayi", "aye", "gaya", "gayi", "gaye", "tha", "thi", "thy", "the",
+    "kar", "karo", "karna", "karta", "karti", "karte", "karein", "kiya",
+    "kiया", "raha", "rahi", "rahe", "hoga", "hogi", "honge", "ho",
+    "ja", "jao", "jata", "jati", "jate", "aa", "aao", "aata", "aati",
+    "de", "dena", "deta", "deti", "dete", "diya", "diया", "lo", "lena",
+    "leta", "leti", "lete", "liya", "lia", "sun", "suno", "sunna",
+    "dekh", "dekha", "dekhi", "socha", "sochi", "samjha", "samjho",
+    "bata", "batao", "batana", "pata", "pta", "puch", "pucha", "pocha",
+
+    # ✅ NEW: Common words in everyday sentences
+    "laken", "lekin", "lakin", "magar", "par", "per", "pe", "se", "ko",
+    "ka", "ki", "ke", "ne", "ni", "na", "nhi", "nai", "nay", "bhi", "hi",
+    "to", "tou", "tau", "wala", "wali", "wale", "walay", "sala", "sali",
+    "office", "ghar", "school", "hospital", "market", "baazar", "bazar",
+    "din", "raat", "subah", "sham", "dopahar", "kal", "parso", "aj",
+    "yahan", "wahan", "idhar", "udhar", "andar", "bahar", "upar", "neeche",
+    "sath", "saath", "bagair", "bina", "tak", "tuk", "phir", "dobara",
+    "abhi", "pehle", "baad", "jaldi", "dhire", "zyada", "kam", "sirf",
+    "bas", "acha", "theek", "shukriya", "shukria", "meherbani", "please",
+    "sorry", "maafi", "khuda", "allah", "inshallah", "mashallah",
+    "yar", "bro", "ary", "are", "oye", "oi", "haye", "wah",
+
+    # ✅ NEW: Sentence connectors & particles
+    "ma", "mein", "mai", "may", "hy", "hwy", "sy", "ky", "ky", "py",
+    "hn", "hna", "hny", "thy", "thi", "tha", "koi", "koe", "kuch",
+    "sb", "sab", "hr", "har", "dosra", "doosra", "agla", "pichla",
+}
+
+ALLOWED_LANGUAGES = set(LANGUAGE_NAMES.keys())
+
+# Remove these from ROMAN_URDU_KEYWORDS — they're too ambiguous:
+AMBIGUOUS_REMOVE = {
+    "are", "to", "ho", "per", "pe", "se", "hi", "na", "bhi", "bas",
+    "ma", "may", "par", "please", "sorry", "bro", "aa", "de", "lo",
+    "sun", "ja", "ko", "ka", "ki", "ke", "ne", "na", "the", "tha",
+    "kar", "jo", "la", "le",
+}
+
+ROMAN_URDU_KEYWORDS = ROMAN_URDU_KEYWORDS - AMBIGUOUS_REMOVE
+
+def is_roman_urdu(text: str) -> bool:
+    words = text.lower().replace("?", "").replace("!", "").replace(".", "").split()
+    match_count = sum(1 for word in words if word in ROMAN_URDU_KEYWORDS)
+    return match_count / max(len(words), 1) >= 0.4  # raised from 0.3 → 0.4
+
 def detect_language(text: str) -> str:
-    """Detect language from text content."""
-    if not text or not text.strip():
-        return "en"  # Default to English for empty text
-    
-    SUPPORTED = {"en", "ur", "ar", "fr", "de", "es", "zh-cn", "zh-tw", "hi"}
-    
+    """
+    Detect language of text and return its code.
+    Only allows: en, ur, fr, ar, hi
+    Returns 'en' as default if language is not in allowed list.
+
+    Args:
+        text: The text to detect language for
+
+    Returns:
+        Language code: 'en', 'ur', 'fr', 'ar', or 'hi'
+    """
     try:
-        # Clean the text
-        text = text.strip()
-        
-        # Detect language
-        lang = detect(text)
-        
-        # Normalize Chinese variants
-        if lang.startswith("zh"):
-            lang = "zh-cn"  # or keep as "zh" based on your needs
-            
-        # Return detected language if supported, otherwise English
-        return lang if lang in SUPPORTED else "en"
-        
-    except LangDetectException:
-        # If detection fails, try with a cleaned version or return default
-        try:
-            # Remove any problematic characters
-            cleaned = ''.join(c for c in text if c.isprintable())
-            if cleaned and len(cleaned) > 10:  # Only try if we have enough content
-                lang = detect(cleaned)
-                if lang.startswith("zh"):
-                    lang = "zh-cn"
-                return lang if lang in SUPPORTED else "en"
-        except:
-            pass
-        return "en"
+        # Check for Roman Urdu first
+        if is_roman_urdu(text):
+            return LANGUAGE_NAMES["ur"]  # "ur"
+
+        code = detect(text)
+
+        # Return code only if it's in allowed languages, else default to 'en'
+        if code in ALLOWED_LANGUAGES:
+            return LANGUAGE_NAMES[code]
+        else:
+            return LANGUAGE_NAMES["en"]  # default to English
+
     except Exception:
-        return "en"
+        return LANGUAGE_NAMES["en"]  # default to English on error
 
 def translate_to_english(text: str, source_lang: str = None) -> str: # type: ignore
     """
@@ -83,8 +144,8 @@ def translate_to_english(text: str, source_lang: str = None) -> str: # type: ign
     # If translation failed or returned same, keep original
     if not result or result == text:
         print(f"[Translate] Translation failed, keeping original")
-        return text
-    
+        return text		 
+
     return result
 
 def translate_from_english(text: str, target_lang: str) -> str:
