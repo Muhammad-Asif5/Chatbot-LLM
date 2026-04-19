@@ -54,6 +54,7 @@ _model_cache: dict = {}
 
 # ── Model loader ──────────────────────────────────────────
 def _get_model(model_name: str):
+    
     if model_name in _model_cache:
         return _model_cache[model_name]
 
@@ -64,7 +65,6 @@ def _get_model(model_name: str):
         os.environ.pop("TRANSFORMERS_OFFLINE", None)
         os.environ.pop("HF_HUB_OFFLINE",       None)
 
-    print(f"[Model] Loading '{model_name}' from {local_path if is_local else hf_repo} …")
     has_gpu   = torch.cuda.is_available()
     device    = "cuda" if has_gpu else "cpu"
     path = local_path if is_local else hf_repo
@@ -73,8 +73,6 @@ def _get_model(model_name: str):
     # ── GPU-only models (Mistral / Llama) ─────────────────
     if model_name in ("mistral-7b", "llama-3-8b"):
         if not has_gpu:
-            print(f"[Model] WARNING: '{model_name}' requires GPU. "
-                  f"Falling back to flan-t5-large on CPU.")
             _model_cache[model_name] = _get_model("flan-t5-large")
             return _model_cache[model_name]
 
@@ -116,7 +114,6 @@ def _get_model(model_name: str):
     os.environ["HF_HUB_OFFLINE"]       = "1"
 
     _model_cache[model_name] = (tokenizer, model, device)
-    print(f"[Model] '{model_name}' ready on {device}")
     return _model_cache[model_name]
 
 # ── Conversational rephrase prompt (human mode) ───────────
@@ -129,13 +126,41 @@ def _build_rephrase_prompt(model_name, question, raw_answer):
     """
     base_instruction = "You are a friendly customer support assistant."
 
-    if model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini", "gemma-2b"):
+    if model_name == "gemma-2b":
         return (
-            f"<s>[INST] {base_instruction}\n"
-            f"Rephrase the answer below in a warm, conversational tone. "
-            f"Do NOT add any information that is not already in the answer.\n\n"
-            f"Original answer: {raw_answer}\n\n"
-            f"Customer question: {question} [/INST]"
+            "<s>[INST]\n"
+            "You are a friendly, natural customer support agent.\n"
+            "Rewrite the answer so it sounds like a real human speaking.\n\n"
+            "Rules:\n"
+            "- Do NOT copy sentences from the original\n"
+            "- Do NOT write sure, here's the rewritten answer in a natural conversational tone:\n"
+            "- Do NOT write sure, here is the rewritten answer\n"
+            "- Make it sound casual, natural, and helpful\n"
+            "- Use simple everyday English\n"
+            "- You MAY slightly rephrase or restructure\n\n"
+            "Example style:\n"
+            "Original: We process refunds within 5–7 business days.\n"
+            "Human: Okay 👍 refunds usually take around 5 to 7 business days to complete.\n\n"
+            f"Question: {question}\n"
+            f"Answer: {raw_answer}\n\n"
+            "Now rewrite the answer in a natural conversational tone.\n[/INST]"
+        )
+    elif model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini"):
+        return (
+            "<s>[INST]\n"
+            "You are a friendly, natural customer support agent.\n"
+            "Rewrite the answer so it sounds like a real human speaking.\n\n"
+            "Rules:\n"
+            "- Do NOT copy sentences from the original\n"
+            "- Make it sound casual, natural, and helpful\n"
+            "- Use simple everyday English\n"
+            "- You MAY rephrase or restructure\n\n"
+            "Example style:\n"
+            "Original: We process refunds within 5–7 business days.\n"
+            "Human: Sure 👍 refunds usually take around 5 to 7 business days to complete.\n\n"
+            f"Question: {question}\n"
+            f"Answer: {raw_answer}\n\n"
+            "Now rewrite the answer in a natural conversational tone.\n[/INST]"
         )
     else:
         opener = "Sure! "
@@ -152,30 +177,48 @@ def _safe_rephrase(generated: str, raw_answer: str) -> str:
     Validate the LLM-generated rephrasing.
     Falls back to a conversational wrap of the raw answer (never bare FAQ text).
     """
-    # Conversational fallback — always sounds human even on LLM failure
     conversational_fallback = f"{raw_answer}"
 
     gen = generated.strip()
     if not gen:
-        print("[SafeRephrase] Step 1 — empty output, using conversational fallback")
         return conversational_fallback
 
+    # ── Strip LLM preambles (catch-all approach) ──────────────
+    # Gemma-2b frequently outputs meta-commentary before the actual answer,
+    # e.g. "Sure, here's the rewritten answer in a natural conversational tone:\n\nHey there!..."
+    # Strategy: if there's a colon followed by a newline, treat everything
+    # before it as a preamble if it looks like meta-commentary.
+    colon_split = re.split(r':\s*\n+', gen, maxsplit=1)
+    if len(colon_split) == 2:
+        before, after = colon_split
+        meta_words = {"rewritten", "answer", "tone", "conversational", "natural", "here", "sure"}
+        before_words = set(before.lower().split())
+        if len(before.split()) <= 12 and meta_words & before_words:
+            gen = after.strip()
+
+    # If the remaining text is wrapped in surrounding quotes, unwrap it
+    if gen.startswith('"') and '"' in gen[1:]:
+        gen = gen[1:gen.rindex('"')].strip()
+
+    # Strip echoed question — model sometimes repeats the question before answering
+    # e.g. "Is there support available? Hey there! Our support team..."
+    first_q = gen.find('?')
+    if 0 < first_q < 120:
+        remainder = gen[first_q + 1:].strip()
+        if remainder:
+            gen = remainder
+
     if gen.endswith("?"):
-        # Model drifted into a question — strip trailing sentence and keep the rest
         sentences = re.split(r'(?<=[.!])\s+', gen)
         sentences = [s for s in sentences if not s.strip().endswith("?")]
         gen = " ".join(sentences).strip()
         if not gen:
-            print("[SafeRephrase] Step 2 — only question sentences, using conversational fallback")
             return conversational_fallback
 
     if len(gen) < len(raw_answer) * 0.2:
-        print("[SafeRephrase] Step 3 — output too short, using conversational fallback")
         return conversational_fallback
 
     # ── Faithfulness check ────────────────────────────────
-    # If the generated text shares almost no content words with the
-    # raw_answer, the model has hallucinated. Fall back to conversational wrap.
     raw_words = set(raw_answer.lower().split())
     gen_words = set(gen.lower().split())
     stopwords = {"the","a","an","is","are","to","of","and","in","it",
@@ -183,24 +226,17 @@ def _safe_rephrase(generated: str, raw_answer: str) -> str:
     raw_content = raw_words - stopwords
     gen_content = gen_words - stopwords
     if raw_content:
-        print(f"[SafeRephrase] Step 4 — faithfulness check: raw_content={len(raw_content)} words")
         overlap = len(raw_content & gen_content) / len(raw_content)
-        print(f"[SafeRephrase] Step 4 — overlap={overlap:.2f}")
-        if overlap < 0.15:   # relaxed from 0.25 → 0.15 to reduce false fallbacks
-            print("[SafeRephrase] Step 5 — low overlap (hallucination risk), using conversational fallback")
+        if overlap < 0.15:
             return conversational_fallback
 
-    print(f"[SafeRephrase] Step 6 — rephrased output accepted: '{gen[:80]}...'")
     return gen
 
 # ── Generator ─────────────────────────────────────────────
 def _generate(model_name: str, prompt: str, style: str) -> str:
-    print(f"[Generate] Model: {model_name}\n\n")
-    print(f"[Generate] Style: {style}\n\n")
 
     tokenizer, model, device = _get_model(model_name)
     max_new = {"simple": 100, "technical": 180, "detailed": 250}.get(style, 120) 
-    print(f"[Generate] device: {device}\n\n")
 
     inputs = tokenizer(
         prompt, return_tensors="pt", truncation=True,
@@ -209,7 +245,19 @@ def _generate(model_name: str, prompt: str, style: str) -> str:
 
     with torch.no_grad():
         # All causal LM models share the same generation path
-        if model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini", "gemma-2b"):
+        if model_name == "gemma-2b":
+            output = model.generate(
+                **inputs,
+                max_new_tokens     = max_new,
+                do_sample          = True,
+                temperature        = 0.7,
+                top_p              = 0.9,
+                repetition_penalty = 1.1,
+                pad_token_id       = tokenizer.eos_token_id,
+            )
+            generated = output[0][inputs["input_ids"].shape[1]:]
+            answer    = tokenizer.decode(generated, skip_special_tokens=True)
+        elif model_name in ("mistral-7b", "llama-3-8b", "phi-3-mini"):
             output = model.generate(
                 **inputs,
                 max_new_tokens     = max_new,
@@ -335,8 +383,6 @@ def query(
 
     # ── 3. Vector search (tenant-isolated) ────────────────
     results    = search_vector_db(user_id, english_input, top_k=3)
-    print(f"[Query] results 1: {results}\n\n")
-   
     best       = results[0] if results else None
     confidence = best["confidence"] if best else "none"
     kb_found   = best is not None and confidence in ("high", "medium")
@@ -368,22 +414,22 @@ def query(
             )
             source = "plan_limit"
             print("[Query] Path: plan_limit")
-
+        elif confidence == "high":
+            english_answer = best["answer"]
+            source         = "kb_direct"
         else:
             assert best is not None
             raw_answer = best["answer"]
-            print(f"[Query] raw_answer: {raw_answer}")
-
             prompt         = _build_rephrase_prompt(model_name, english_input, raw_answer)
             raw_output     = _generate(model_name, prompt, style)
             english_answer = _safe_rephrase(raw_output, raw_answer)
             source         = f"rag_{model_name}"
-            print(f"[Query] Path: human → rephrase via {model_name}")
+
+            print(f"[Query] raw_answer: {raw_answer}")
             print(f"[Query] Prompt sent to model:\n{prompt}")
-            print(f"[Query] Raw KB answer:        {raw_answer}")
-            print(f"[Query] Raw model output:     {raw_output}")
-            print(f"[Query] Final answer:         {english_answer}")
-            print(f"[Query] Source:               {source}")
+            print(f"[Query] _generate output:     {raw_output}")
+            print(f"[Query] _safe_rephrase:     {english_answer}")
+            print(f"[Query] Source:               {source}")            
                 
     else:
         # ── 4d. Unknown mode — safe fallback ───────────────
