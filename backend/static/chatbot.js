@@ -263,6 +263,7 @@
     sendBtn.disabled = false;
     input.disabled = false;
     lang.disabled = false;
+    input.focus();
   }
 
   sendBtn.onclick = sendMessage;
