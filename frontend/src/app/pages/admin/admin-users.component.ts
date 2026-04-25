@@ -9,137 +9,174 @@ import { AdminService } from '../../services/admin.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="page">
-      <div class="page-header">
-        <h2>👥 User Management</h2>
-        <button (click)="openCreate()" class="btn-primary">+ Add User</button>
-      </div>
-
-      <!-- Search -->
-      <div class="search-bar">
-        <input [(ngModel)]="search" placeholder="🔍 Search by name or email..."
-               (input)="filterUsers()">
-        <div class="filter-tabs">
-          <button [class.active]="filter==='all'"      (click)="setFilter('all')">All</button>
-          <button [class.active]="filter==='active'"   (click)="setFilter('active')">Active</button>
-          <button [class.active]="filter==='inactive'" (click)="setFilter('inactive')">Inactive</button>
-          <button [class.active]="filter==='admin'"    (click)="setFilter('admin')">Admins</button>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div class="card">
-        <div *ngIf="loading" class="loading">Loading users...</div>
-        <div *ngIf="!loading && filtered.length === 0" class="empty">No users found.</div>
-
-        <table *ngIf="!loading && filtered.length > 0">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Plan</th>
-              <th>FAQs</th>
-              <th>Docs</th>
-              <th>Chats</th>
-              <th>Status</th>
-              <th>Role</th>
-              <th>Joined</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let u of filtered">
-              <td>
-                <div class="user-cell">
-                  <div class="avatar">{{ u.name.charAt(0).toUpperCase() }}</div>
-                  <div>
-                    <div class="uname">{{ u.name }}</div>
-                    <div class="uemail">{{ u.email }}</div>
-                  </div>
-                </div>
-              </td>
-              <td><span class="plan-badge plan-{{ u.plan }}">{{ u.plan }}</span></td>
-              <td class="num">{{ u.stats?.faqs ?? 0 }}</td>
-              <td class="num">{{ u.stats?.documents ?? 0 }}</td>
-              <td class="num">{{ u.stats?.chats ?? 0 }}</td>
-              <td>
-                <span class="status-dot" [class.active]="u.is_active"
-                      [title]="u.is_active ? 'Active' : 'Inactive'">
-                  {{ u.is_active ? '🟢 Active' : '🔴 Inactive' }}
-                </span>
-              </td>
-              <td>
-                <span *ngIf="u.is_admin" class="role-admin">👑 Admin</span>
-                <span *ngIf="!u.is_admin" class="role-user">User</span>
-              </td>
-              <td class="date">{{ u.created_at | date:'mediumDate' }}</td>
-              <td>
-                <div class="action-btns">
-                  <button (click)="viewUser(u)"   class="btn-icon" title="View details">👁️</button>
-                  <button (click)="openEdit(u)"   class="btn-icon" title="Edit">✏️</button>
-                  <button (click)="toggleActive(u)" class="btn-icon"
-                          [title]="u.is_active ? 'Deactivate' : 'Activate'">
-                    {{ u.is_active ? '🚫' : '✅' }}
-                  </button>
-                  <button (click)="deleteUser(u)" class="btn-icon btn-danger" title="Delete">🗑️</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+   <div class="page">
+  <div class="page-header">
+    <h2>👥 User Management</h2>
+    <button (click)="openCreate()" class="btn-primary">+ Add User</button>
+  </div>
+  <!-- Search -->
+  <div class="search-bar">
+    <input [(ngModel)]="search" placeholder="🔍 Search by name or email..." (input)="filterUsers()">
+    <div class="filter-tabs">
+      <button [class.active]="filter==='all'" (click)="setFilter('all')">All</button>
+      <button [class.active]="filter==='active'" (click)="setFilter('active')">Active</button>
+      <button [class.active]="filter==='inactive'" (click)="setFilter('inactive')">Inactive</button>
+      <button [class.active]="filter==='admin'" (click)="setFilter('admin')">Admins</button>
     </div>
+  </div>
+  <!-- Table -->
+  <div class="content-wrapper">
+    <div class="card faq-list-container">
+      <div *ngIf="loading" class="loading">Loading users...</div>
+      <div *ngIf="!loading && filtered.length === 0" class="empty">No users found.</div>
+      <table *ngIf="!loading && filtered.length > 0">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Plan</th>
+            <th>FAQs</th>
+            <th>Docs</th>
+            <th>Chats</th>
+            <th>Status</th>
+            <th>Role</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of filtered">
+            <td>
+              <div class="user-cell">
+                <div class="avatar">{{ u.name.charAt(0).toUpperCase() }}</div>
+                <div>
+                  <div class="uname">{{ u.name }}</div>
+                  <div class="uemail">{{ u.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="plan-badge plan-{{ u.plan }}">{{ u.plan }}</span>
+            </td>
+            <td class="num">{{ u.stats?.faqs ?? 0 }}</td>
+            <td class="num">{{ u.stats?.documents ?? 0 }}</td>
+            <td class="num">{{ u.stats?.chats ?? 0 }}</td>
+            <td>
+              <span class="status-dot" [class.active]="u.is_active" [title]="u.is_active ? 'Active' : 'Inactive'">
+                {{ u.is_active ? '🟢 Active' : '🔴 Inactive' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="u.is_admin" class="role-admin">👑 Admin</span>
+              <span *ngIf="!u.is_admin" class="role-user">User</span>
+            </td>
+            <td class="date">{{ u.created_at | date:'mediumDate' }}</td>
+            <td>
+              <div class="action-btns">
+                <button (click)="viewUser(u)" class="btn-icon" title="View details">👁️</button>
+                <button (click)="openEdit(u)" class="btn-icon" title="Edit">✏️</button>
+                <button (click)="toggleActive(u)" class="btn-icon" [title]="u.is_active ? 'Deactivate' : 'Activate'">
+                  {{ u.is_active ? '🚫' : '✅' }}
+                </button>
+                <button (click)="deleteUser(u)" class="btn-icon btn-danger" title="Delete">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- ── Modal ─────────────────────────────────────────── -->
-    <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
-      <div class="modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>{{ editId ? 'Edit User' : 'Create User' }}</h3>
-          <button (click)="closeModal()" class="modal-close">✕</button>
+  <!-- ✅ PAGINATION -->
+  <div class="pagination-container" *ngIf="totalItems > 0 && totalPages > 0">
+        <div class="pagination-info">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalItems) }} of {{ totalItems }} FAQs
         </div>
-
-        <div class="form-group">
-          <label>Full Name</label>
-          <input [(ngModel)]="form.name" type="text" placeholder="John Doe">
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input [(ngModel)]="form.email" type="email" placeholder="user@example.com">
-        </div>
-        <div class="form-group">
-          <label>{{ editId ? 'New Password (leave blank to keep current)' : 'Password' }}</label>
-          <input [(ngModel)]="form.password" type="password" placeholder="••••••••">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Plan</label>
-            <select [(ngModel)]="form.plan">
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
+        <div class="pagination-controls" *ngIf="totalPages > 1">
+          <button 
+            (click)="previousPage()" 
+            class="btn-pagination"
+            [disabled]="currentPage === 1">
+            ← Previous
+          </button>
+          
+          <div class="page-numbers">
+            <button 
+              *ngFor="let page of getPageNumbers()"
+              (click)="goToPage(page)"
+              class="btn-page"
+              [class.active]="page === currentPage">
+              {{ page }}
+            </button>
           </div>
-          <div class="check-group">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="form.is_admin">
-              <span>Admin privileges</span>
-            </label>
-            <label class="checkbox-label" *ngIf="editId">
-              <input type="checkbox" [(ngModel)]="form.is_active">
-              <span>Account active</span>
-            </label>
-          </div>
-        </div>
 
-        <div class="modal-actions">
-          <button (click)="closeModal()" class="btn-ghost">Cancel</button>
-          <button (click)="saveUser()" class="btn-primary" [disabled]="saving">
-            {{ saving ? 'Saving...' : (editId ? 'Update User' : 'Create User') }}
+          <button 
+            (click)="nextPage()" 
+            class="btn-pagination"
+            [disabled]="currentPage === totalPages">
+            Next →
           </button>
         </div>
       </div>
+
+</div>
+<!-- ── Modal ─────────────────────────────────────────── -->
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ editId ? 'Edit User' : 'Create User' }}</h3>
+      <button (click)="closeModal()" class="modal-close">✕</button>
     </div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input [(ngModel)]="form.name" type="text" placeholder="John Doe">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input [(ngModel)]="form.email" type="email" placeholder="user@example.com">
+    </div>
+    <div class="form-group">
+      <label>{{ editId ? 'New Password (leave blank to keep current)' : 'Password' }}</label>
+      <input [(ngModel)]="form.password" type="password" placeholder="••••••••">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Plan</label>
+        <select [(ngModel)]="form.plan">
+          <option value="free">Free</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+      </div>
+      <div class="check-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="form.is_admin">
+          <span>Admin privileges</span>
+        </label>
+        <label class="checkbox-label" *ngIf="editId">
+          <input type="checkbox" [(ngModel)]="form.is_active">
+          <span>Account active</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button (click)="closeModal()" class="btn-ghost">Cancel</button>
+      <button (click)="saveUser()" class="btn-primary" [disabled]="saving">
+        {{ saving ? 'Saving...' : (editId ? 'Update User' : 'Create User') }}
+      </button>
+    </div>
+  </div>
+</div>
   `,
   styles: [`
+     .page {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #0f1419;
+      padding-bottom: 25px;
+    }
     .page-header {
       display: flex; justify-content: space-between;
       align-items: center; margin-bottom: 24px;
@@ -275,62 +312,267 @@ import { AdminService } from '../../services/admin.service';
     .modal-actions {
       display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;
     }
+
+/* ───────────────────────────────────────── */
+/* FULL PAGE LAYOUT */
+/* ───────────────────────────────────────── */
+  :host {
+      display: block;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
+ 
+
+/* ───────────────────────────────────────── */
+/* SCROLLABLE CONTENT */
+/* ───────────────────────────────────────── */
+.content-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ───────────────────────────────────────── */
+/* FIXED HEADER */
+/* ───────────────────────────────────────── */
+.page-header {
+  flex-shrink: 0;
+}
+
+/* ───────────────────────────────────────── */
+/* FIXED SEARCH */
+/* ───────────────────────────────────────── */
+.search-bar {
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────── */
+    /* PAGINATION STYLES: Fixed at Bottom */
+    /* ─────────────────────────────────────────────────────── */
+     .pagination-container {
+      background: #16213e;
+      border-top: 1px solid #0f3460;
+      padding: 16px 24px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 0;
+      min-height: fit-content;
+    }
+      
+    .pagination-info {
+      color: #aaa;
+      font-size: 13px;
+      text-align: center;
+      margin: 0;
+    }
+    .pagination-controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 0;
+    }
+
+    .btn-pagination {
+      padding: 8px 16px;
+      background: #0f3460;
+      color: white;
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+      margin: 0;
+    }
+    .btn-pagination:hover:not(:disabled) {
+      background: #e94560;
+      color: white;
+    }
+    .btn-pagination:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: #555;
+    }
+
+    .page-numbers {
+      display: flex;
+      gap: 6px;
+      margin: 0;
+    }
+    .btn-page {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      background: #0f3460;
+      color: #aaa;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+      margin: 0;
+    }
+    .btn-page:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
+    .btn-page.active {
+      background: #e94560;
+      color: white;
+      border-color: #e94560;
+    }
+
+
+/* ─────────────────────────────────────────────────────── */
+    /* SCROLLBAR STYLING */
+    /* ─────────────────────────────────────────────────────── */
+    .content-wrapper::-webkit-scrollbar {
+      width: 8px;
+    }
+    .content-wrapper::-webkit-scrollbar-track {
+      background: #0f1419;
+      border-radius: 10px;
+    }
+    .content-wrapper::-webkit-scrollbar-thumb {
+      background: #0f3460;
+      border-radius: 10px;
+      border: 2px solid #0f1419;
+    }
+    .content-wrapper::-webkit-scrollbar-thumb:hover {
+      background: #e94560;
+    }
+
   `]
 })
 export class AdminUsersComponent implements OnInit {
-  users   : any[] = [];
+  users: any[] = [];
   filtered: any[] = [];
-  loading  = false;
-  saving   = false;
+
+  // ✅ Pagination State
+  currentPage = 1;
+  pageSize = 10;
+  totalItems = 0;
+  totalPages = 0;
+
+  loading = false;
+  saving = false;
   showModal = false;
-  editId   : string | null = null;
-  search   = '';
-  filter   = 'all';
+  editId: string | null = null;
+
+  search = '';
+  filter = 'all';
+
+  Math = Math; // for template
 
   form = {
     name: '', email: '', password: '',
     plan: 'free', is_admin: false, is_active: true
   };
 
-  constructor(private adminSvc: AdminService, private router: Router) {}
+  constructor(private adminSvc: AdminService, private router: Router) { }
 
-  ngOnInit() { this.loadUsers(); }
-
-  loadUsers() {
-    this.loading = true;
-    this.adminSvc.getUsers().subscribe({
-      next: (res: any) => {
-        this.users  = res?.data ?? res;
-        this.filterUsers();
-        this.loading = false;
-      },
-      error: () => { this.loading = false; }
-    });
+  ngOnInit() {
+    this.loadUsers();
   }
 
-  setFilter(f: string) { this.filter = f; this.filterUsers(); }
+  // ✅ LOAD USERS WITH PAGINATION
+  loadUsers() {
+    this.loading = true;
 
+    this.adminSvc.getUsers(this.currentPage, this.pageSize, this.search, this.filter)
+      .subscribe({
+        next: (res: any) => { 
+          // Expected response format:
+          // { items, total, page, page_size, total_pages }
+
+          this.users = res.data.items;
+          this.filtered = res.data.items;
+
+          this.totalItems = res.data.total;
+          this.currentPage = res.data.page;
+          this.pageSize = res.data.page_size;
+          this.totalPages = res.data.total_pages;
+
+          this.loading = false;
+        },
+        error: () => { this.loading = false; }
+      });
+  }
+
+  // ✅ FILTER CHANGE (SERVER SIDE)
+  setFilter(f: string) {
+    this.filter = f;
+    this.currentPage = 1;
+    this.loadUsers();
+  }
+
+  // ✅ SEARCH (SERVER SIDE)
+  onSearch() {
+    this.currentPage = 1;
+    this.loadUsers();
+  }
+
+  // ✅ PAGINATION METHODS
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.loadUsers();
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.loadUsers();
+    }
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.loadUsers();
+    }
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxPagesToShow = 5;
+
+    let start = Math.max(1, this.currentPage - 2);
+    let end = Math.min(this.totalPages, start + maxPagesToShow - 1);
+
+    if (end - start + 1 < maxPagesToShow) {
+      start = Math.max(1, end - maxPagesToShow + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  // ✅ SEARCH INPUT CHANGE
   filterUsers() {
-    let list = this.users;
-    const q  = this.search.toLowerCase().trim();
-    if (q) list = list.filter(u =>
-      u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
-    if (this.filter === 'active')   list = list.filter(u =>  u.is_active);
-    if (this.filter === 'inactive') list = list.filter(u => !u.is_active);
-    if (this.filter === 'admin')    list = list.filter(u =>  u.is_admin);
-    this.filtered = list;
+    this.onSearch(); // redirect to server
   }
 
   openCreate() {
     this.editId = null;
-    this.form   = { name: '', email: '', password: '', plan: 'free', is_admin: false, is_active: true };
+    this.form = { name: '', email: '', password: '', plan: 'free', is_admin: false, is_active: true };
     this.showModal = true;
   }
 
   openEdit(u: any) {
     this.editId = u.id;
-    this.form   = {
+    this.form = {
       name: u.name, email: u.email, password: '',
       plan: u.plan, is_admin: u.is_admin, is_active: u.is_active
     };
@@ -342,12 +584,16 @@ export class AdminUsersComponent implements OnInit {
   saveUser() {
     if (!this.form.name || !this.form.email) return;
     if (!this.editId && !this.form.password) return;
+
     this.saving = true;
 
     const payload: any = {
-      name: this.form.name, email: this.form.email,
-      plan: this.form.plan, is_admin: this.form.is_admin,
+      name: this.form.name,
+      email: this.form.email,
+      plan: this.form.plan,
+      is_admin: this.form.is_admin,
     };
+
     if (this.editId) {
       payload.is_active = this.form.is_active;
       if (this.form.password) payload.password = this.form.password;
@@ -360,7 +606,12 @@ export class AdminUsersComponent implements OnInit {
       : this.adminSvc.createUser(payload);
 
     call.subscribe({
-      next: () => { this.saving = false; this.closeModal(); this.loadUsers(); },
+      next: () => {
+        this.saving = false;
+        this.closeModal();
+        this.currentPage = 1;
+        this.loadUsers();
+      },
       error: (e: any) => {
         alert(e?.error?.message || 'Error saving user');
         this.saving = false;
@@ -370,18 +621,20 @@ export class AdminUsersComponent implements OnInit {
 
   toggleActive(u: any) {
     const action = u.is_active ? 'deactivate' : 'activate';
-    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${u.name}?`)) return;
+    if (!confirm(`${action} ${u.name}?`)) return;
+
     this.adminSvc.toggleActive(u.id).subscribe({
       next: () => this.loadUsers(),
-      error: (e: any) => alert(e?.error?.message || 'Error')
+      error: () => alert('Error')
     });
   }
 
   deleteUser(u: any) {
-    if (!confirm(`Permanently delete "${u.name}"? All their data will be lost.`)) return;
+    if (!confirm(`Delete "${u.name}"?`)) return;
+
     this.adminSvc.deleteUser(u.id).subscribe({
       next: () => this.loadUsers(),
-      error: (e: any) => alert(e?.error?.message || 'Error deleting user')
+      error: () => alert('Error deleting user')
     });
   }
 

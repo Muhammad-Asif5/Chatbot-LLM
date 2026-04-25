@@ -32,7 +32,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
     children: [
       { path: '',          redirectTo: 'overview', pathMatch: 'full' },
-      { path: 'overview',  loadComponent: () => import('./pages/admin/admin-overview.component').then(m => m.AdminOverviewComponent) },
+      { path: 'overview',  loadComponent: () => import('./pages/admin/admin-overview/admin-overview.component').then(m => m.AdminOverviewComponent) },
       { path: 'users',     loadComponent: () => import('./pages/admin/admin-users.component').then(m => m.AdminUsersComponent) },
       { path: 'users/:id', loadComponent: () => import('./pages/admin/admin-user-detail.component').then(m => m.AdminUserDetailComponent) },
       { path: 'chats',     loadComponent: () => import('./pages/admin/admin-chats.component').then(m => m.AdminChatsComponent) },

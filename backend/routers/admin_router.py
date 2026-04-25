@@ -2,7 +2,7 @@
 Admin Router — full user management + platform stats.
 All endpoints require is_admin=True on the JWT owner.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel, EmailStr
@@ -55,79 +55,277 @@ class UserUpdateRequest(BaseModel):
 # ── PLATFORM OVERVIEW ─────────────────────────────────────
 @router.get("/stats")
 def get_platform_stats(
-    db:    Session = Depends(get_db),
-    admin: User    = Depends(get_admin_user)
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
 ):
-    """High-level platform stats for the admin dashboard."""
-    total_users    = db.query(User).count()
-    active_users   = db.query(User).filter(User.is_active == True).count()
-    inactive_users = total_users - active_users
-    total_faqs     = db.query(FAQ).count()
-    total_docs     = db.query(Document).count()
-    total_chats    = db.query(ChatLog).count()
-    total_kb       = db.query(KnowledgeBase).count()
+    """
+    Platform overview stats (lightweight, fast response).
+    No pagination or heavy aggregations inside this endpoint.
+    """
 
-    # Top 5 users by chat volume
-    top_users = (
-        db.query(User.id, User.name, User.email, func.count(ChatLog.id).label("chat_count"))
+    # ─────────────────────────────
+    # USERS
+    # ─────────────────────────────
+    total_users = db.query(User).count()
+    active_users = db.query(User).filter(User.is_active == True).count()
+    inactive_users = total_users - active_users
+
+    # ─────────────────────────────
+    # CONTENT STATS
+    # ─────────────────────────────
+    total_faqs = db.query(FAQ).count()
+    total_documents = db.query(Document).count()
+    total_chats = db.query(ChatLog).count()
+    total_kb = db.query(KnowledgeBase).count()
+
+    # ─────────────────────────────
+    # OPTIONAL: small top summary (NOT full pagination)
+    # ─────────────────────────────
+    top_users_preview = (
+        db.query(
+            User.id,
+            User.name,
+            User.email,
+            func.count(ChatLog.id).label("chat_count")
+        )
         .outerjoin(ChatLog, ChatLog.user_id == User.id)
         .group_by(User.id)
         .order_by(func.count(ChatLog.id).desc())
+        .limit(5)   # only preview (dashboard widget)
+        .all()
+    )
+
+    # ─────────────────────────────
+    # OPTIONAL: latest 5 chats preview
+    # ─────────────────────────────
+    recent_chats_preview = (
+        db.query(
+            ChatLog.id,
+            ChatLog.question,
+            ChatLog.answer,
+            ChatLog.source,
+            ChatLog.language,
+            ChatLog.created_at,
+            User.name.label("user_name")
+        )
+        .join(User, User.id == ChatLog.user_id)
+        .order_by(ChatLog.created_at.desc())
         .limit(5)
         .all()
     )
 
-    # Recent 10 chat logs across all users
-    recent_chats = (
-        db.query(ChatLog, User.name, User.email)
+    # ─────────────────────────────
+    # RESPONSE
+    # ─────────────────────────────
+    return success_response(data={
+        "overview": {
+            "total_users": total_users,
+            "active_users": active_users,
+            "inactive_users": inactive_users,
+            "total_faqs": total_faqs,
+            "total_documents": total_documents,
+            "total_chats": total_chats,
+            "total_kb": total_kb,
+        },
+
+        # small dashboard preview only
+        "top_users_preview": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "chat_count": u.chat_count
+            }
+            for u in top_users_preview
+        ],
+
+        "recent_chats_preview": [
+            {
+                "id": c.id,
+                "user_name": c.user_name,
+                "question": c.question,
+                "answer": c.answer,
+                "source": c.source,
+                "language": c.language,
+                "created_at": str(c.created_at),
+            }
+            for c in recent_chats_preview
+        ],
+    })
+
+@router.get("/recent-conversations-scroll")
+def get_recent_conversations_scroll(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+    recent_page: int = Query(1, ge=1),
+    recent_page_size: int = Query(10, ge=1, le=100),
+):
+
+    print(f"Fetching recent conversations - page: {recent_page}, page_size: {recent_page_size}")
+    # ─────────────────────────────
+    # RECENT CHATS ONLY
+    # ─────────────────────────────
+    recent_query = (
+        db.query(
+            ChatLog.id,
+            ChatLog.question,
+            ChatLog.answer, 
+            ChatLog.source,
+            ChatLog.language,
+            ChatLog.created_at,
+            User.name.label("user_name")
+        )
         .join(User, User.id == ChatLog.user_id)
         .order_by(ChatLog.created_at.desc())
-        .limit(10)
+    )
+
+    recent_total = recent_query.count()
+
+    recent_chats = (
+        recent_query
+        .offset((recent_page - 1) * recent_page_size)
+        .limit(recent_page_size)
+        .all()
+    )
+
+    # ─────────────────────────────
+    # RESPONSE (MINIMAL + CLEAN)
+    # ─────────────────────────────
+    return success_response(data={
+
+        "recent_chats": [
+            {
+                "id": c.id,
+                "user_name": c.user_name,
+                "question": c.question,
+                "answer": c.answer,
+                "source": c.source,
+                "language": c.language,
+                "created_at": str(c.created_at),
+            }
+            for c in recent_chats
+        ],
+
+        "pagination": {
+            "page": recent_page,
+            "page_size": recent_page_size,
+            "total": recent_total,
+            "has_more": (recent_page * recent_page_size) < recent_total
+        }
+    })
+
+@router.get("/top-users")
+def get_top_users(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+):
+    print(f"Fetching top users - page: {page}, page_size: {page_size}")
+
+    base_query = (
+        db.query(
+            User.id,
+            User.name,
+            User.email,
+            func.count(ChatLog.id).label("chat_count")
+        )
+        .outerjoin(ChatLog, ChatLog.user_id == User.id)
+        .group_by(User.id)
+    )
+
+    # ✅ Correct total count using subquery
+    total = db.query(func.count()).select_from(base_query.subquery()).scalar()
+
+    # ✅ Apply ordering AFTER count (important)
+    users = (
+        base_query
+        .order_by(func.count(ChatLog.id).desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
 
     return success_response(data={
-        "overview": {
-            "total_users":    total_users,
-            "active_users":   active_users,
-            "inactive_users": inactive_users,
-            "total_faqs":     total_faqs,
-            "total_documents":total_docs,
-            "total_chats":    total_chats,
-            "total_kb":       total_kb,
-        },
         "top_users": [
-            {"id": u.id, "name": u.name, "email": u.email, "chat_count": u.chat_count}
-            for u in top_users
-        ],
-        "recent_chats": [
             {
-                "id":         c.ChatLog.id,
-                "user_name":  c.name,
-                "user_email": c.email,
-                "question":   c.ChatLog.question,
-                "answer":     c.ChatLog.answer,
-                "source":     c.ChatLog.source,
-                "language":   c.ChatLog.language,
-                "created_at": str(c.ChatLog.created_at),
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "chat_count": u.chat_count
             }
-            for c in recent_chats
-        ]
+            for u in users
+        ],
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "has_more": (page * page_size) < total
+        }
     })
-
 
 # ── LIST ALL USERS ────────────────────────────────────────
 @router.get("/users")
 def list_users(
-    db:    Session = Depends(get_db),
-    admin: User    = Depends(get_admin_user)
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+
+    # ✅ NEW PARAMS
+    search: str = Query(None, description="Search by name or email"),
+    filter: str = Query("all", description="Filter: all | active | inactive | admin"),
+
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user)
 ):
-    users = db.query(User).order_by(User.created_at.desc()).all()
-    return success_response(
-        data=[_serialize_user(u, db) for u in users],
-        message=f"{len(users)} users found"
+    # ─────────────── Base Query ───────────────
+    query = db.query(User)
+
+    # ─────────────── SEARCH ───────────────
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(search_term),
+                User.email.ilike(search_term)
+            )
+        )
+
+    # ─────────────── FILTER ───────────────
+    if filter == "active":
+        query = query.filter(User.is_active == True)
+    elif filter == "inactive":
+        query = query.filter(User.is_active == False)
+    elif filter == "admin":
+        query = query.filter(User.is_admin == True)
+
+    # ─────────────── TOTAL COUNT (AFTER FILTERS) ───────────────
+    total_users = query.count()
+
+    # ─────────────── PAGINATION ───────────────
+    offset = (page - 1) * page_size
+
+    users = (
+        query
+        .order_by(User.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
     )
 
+    total_pages = (total_users + page_size - 1) // page_size
+
+    # ─────────────── RESPONSE ───────────────
+    return success_response(
+        data={
+            "items": [_serialize_user(u, db) for u in users],
+            "total": total_users,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages
+        },
+        message=f"{len(users)} users found"
+    )
 
 # ── GET SINGLE USER ───────────────────────────────────────
 @router.get("/users/{user_id}")

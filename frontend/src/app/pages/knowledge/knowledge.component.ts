@@ -176,8 +176,10 @@ export class KnowledgeComponent implements OnInit {
 
   load() {
     this.loading = true;
+    
     this.http.get<any[]>(`${this.apiUrl}/knowledge/`).subscribe({
-      next: (data:any) => { this.items = data.data; this.loading = false; },
+      next: (data:any) => { 
+        this.items = data.data; this.loading = false; },
       error: ()    => { this.loading = false; }
     });
   }

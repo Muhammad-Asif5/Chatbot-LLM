@@ -95,7 +95,7 @@ import { AuthService } from '../../services/auth.service';
       font-size: 13px; margin-top: auto; transition: all 0.2s;
     }
     .logout-btn:hover { background: #e94560; color: white; }
-    .content { margin-left: 250px; flex: 1; padding: 30px; color: white; }
+    .content { margin-left: 250px; flex: 1; padding: 10px; color: white; }
   `]
 })
 export class DashboardComponent {

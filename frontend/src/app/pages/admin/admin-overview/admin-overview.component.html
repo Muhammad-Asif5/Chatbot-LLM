@@ -1,0 +1,151 @@
+<div class="page">
+
+  <div class="page-header">
+    <h2>📊 Platform Overview</h2>
+    <span class="refresh-btn" (click)="loadStats()">🔄 Refresh</span>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    Loading platform stats...
+  </div>
+
+  <ng-container *ngIf="!loading && stats">
+
+    <!-- ================= STATS ================= -->
+    <div class="stats-grid">
+
+      <div class="stat-card purple">
+        <div class="stat-icon">👥</div>
+        <div class="stat-num">{{ stats?.overview?.total_users }}</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-sub">
+          {{ stats?.overview?.active_users }} active ·
+          {{ stats?.overview?.inactive_users }} inactive
+        </div>
+      </div>
+
+      <div class="stat-card blue">
+        <div class="stat-icon">💬</div>
+        <div class="stat-num">{{ stats?.overview?.total_chats }}</div>
+        <div class="stat-label">Total Chats</div>
+      </div>
+
+      <div class="stat-card green">
+        <div class="stat-icon">❓</div>
+        <div class="stat-num">{{ stats?.overview?.total_faqs }}</div>
+        <div class="stat-label">Total FAQs</div>
+      </div>
+
+      <div class="stat-card orange">
+        <div class="stat-icon">📄</div>
+        <div class="stat-num">{{ stats?.overview?.total_documents }}</div>
+        <div class="stat-label">Documents</div>
+      </div>
+
+      <div class="stat-card teal">
+        <div class="stat-icon">📝</div>
+        <div class="stat-num">{{ stats?.overview?.total_kb }}</div>
+        <div class="stat-label">KB Articles</div>
+      </div>
+
+    </div>
+
+    <div class="two-col">
+      <!-- ================= TOP USERS ================= -->
+      <div class="card">
+        <h3>🏆 Top Users</h3>
+
+        <div class="chat-scroll" (scroll)="onTopUsersScroll($event)">
+
+          <div *ngFor="let u of topUsers; let i = index; trackBy: trackByUser" class="chat-row">
+            <div class="rank">
+              #{{ i + 1 }}
+            </div>
+
+            <div class="user-info">
+              <div class="uname">{{ u.name }}</div>
+              <div class="uemail">{{ u.email }}</div>
+            </div>
+
+            <div class="chat-count">{{ u.chat_count }} chats</div>
+          </div>
+
+          <div *ngIf="topUsersLoading" class="loading-small">
+            Loading more users...
+          </div>
+
+          <div *ngIf="!hasMoreTopUsers && topUsers.length > 0" class="end-msg">
+            No more users
+          </div>
+
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+
+          <button (click)="prevTopPage()" [disabled]="topUsersPage === 1">
+            Prev
+          </button>
+
+          <span class="page-info">Page {{ topUsersPage }}</span>
+
+          <button (click)="nextTopPage()" [disabled]="!hasMoreTopUsers">
+            Next
+          </button>
+
+        </div>
+      </div>
+      <!-- ================= RECENT CHATS ================= -->
+      <div class="card">
+        <h3>🕐 Recent Conversations</h3>
+
+        <div class="chat-scroll" (scroll)="onRecentChatScroll($event)">
+
+          <div *ngFor="let c of recentChats; trackBy: trackByChat" class="chat-row">
+            <div class="chat-user">{{ c.user_name }}</div>
+
+            <div class="chat-q">
+              Q: {{ c.question?.slice(0, 80) }}
+              <span *ngIf="c.question?.length > 80">...</span>
+            </div>
+
+            <div class="chat-q">
+              A: {{ c.answer?.slice(0, 80) }}
+              <span *ngIf="c.answer?.length > 80">...</span>
+            </div>
+
+            <div class="chat-meta">
+              <span class="badge">{{ c.source }}</span>
+              <span class="badge lang">{{ c.language }}</span>
+              <span class="date">{{ c.created_at | date:'short' }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="recentChatsLoading" class="loading-small">
+            Loading more...
+          </div>
+
+          <div *ngIf="!hasMoreChats" class="end-msg">
+            No more conversations
+          </div>
+
+        </div>
+
+        <div class="pagination">
+          <button (click)="prevRecentPage()" [disabled]="recentChatsPage === 1">
+            Prev
+          </button>
+
+          <span class="page-info">Page {{ recentChatsPage }}</span>
+
+          <button (click)="nextRecentPage()" [disabled]="!hasMoreChats">
+            Next
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </ng-container>
+</div>

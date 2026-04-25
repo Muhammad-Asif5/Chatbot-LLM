@@ -1,7 +1,47 @@
-/* You can add global styles to this file, and also import other style files */
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─────────────────────────────────────────────────────── */
+/* GLOBAL STYLES: Reset and Base Styles */
+/* ─────────────────────────────────────────────────────── */
+
+/* Reset all margins and padding */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* HTML: Full height, no overflow */
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* BODY: Full height, no scroll, no overflow */
 body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   font-family: Arial, sans-serif;
   background: #1a1a2e;
   color: white;
+}
+
+/* APP ROOT: Ensure full height */
+app-root {
+  display: block;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Mobile viewport fix: Use dynamic viewport height (100dvh) on supported browsers */
+@supports (height: 100dvh) {
+  html {
+    height: 100dvh;
+  }
+  body {
+    height: 100dvh;
+  }
 }

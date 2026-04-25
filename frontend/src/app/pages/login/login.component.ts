@@ -79,7 +79,7 @@ export class LoginComponent {
 
   ngOnInit() {
     if (this.auth.isLoggedIn()) {
-      this.router.navigate(['/dashboard']);
+      this.router.navigate(['/dashboard/analytics']);
     }else{
       this.router.navigate(['/login']);
     }
@@ -93,7 +93,7 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
     this.auth.login({ email: this.email, password: this.password }).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.router.navigate(['/dashboard/analytics']),
       error: (e) => {
         this.error = e.error?.errors || 'Login failed';
         this.loading = false;

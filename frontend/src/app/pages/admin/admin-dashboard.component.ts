@@ -93,7 +93,7 @@ import { AuthService } from '../../services/auth.service';
     }
     .logout-btn:hover { background: #7c3aed; color: white; }
 
-    .content { margin-left: 240px; flex: 1; padding: 32px; color: white; }
+    .content { margin-left: 250px; flex: 1; padding: 10px; color: white; }
   `]
 })
 export class AdminDashboardComponent {

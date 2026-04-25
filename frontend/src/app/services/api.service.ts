@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { PaginatedFAQResponse } from '../models/faq.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -10,8 +11,21 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   // ── FAQs ─────────────────────────────────────────────
-  getFaqs(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/faqs/`);
+  /**
+   * Get paginated FAQs for the current user
+   * @param page Page number (1-indexed)
+   * @param pageSize Items per page
+   */
+  getFaqs(page: number = 1, pageSize: number = 10): Observable<PaginatedFAQResponse> {
+    return this.http.get<PaginatedFAQResponse>(
+      `${this.apiUrl}/faqs/`,
+      {
+        params: {
+          page: page.toString(),
+          page_size: pageSize.toString()
+        }
+      }
+    );
   }
 
   addFaq(data: { question: string; answer: string; category: string }): Observable<any> {
@@ -30,7 +44,10 @@ export class ApiService {
     return this.http.delete(`${this.apiUrl}/faqs/all/`);
   }
 
-  // ── Documents ─────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // Documents
+  // ─────────────────────────────────────────────
+
   getDocuments(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/documents/`);
   }
@@ -45,8 +62,16 @@ export class ApiService {
     return this.http.delete(`${this.apiUrl}/documents/${id}`);
   }
 
-  // ── Analytics ─────────────────────────────────────────
-  getAnalytics(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/analytics/`);
+  // ─────────────────────────────────────────────
+  // Analytics (🔥 FIXED WITH PAGINATION)
+  // ─────────────────────────────────────────────
+
+  getAnalytics(page: number = 1, pageSize: number = 10): Observable<any> {
+    return this.http.get(`${this.apiUrl}/analytics/`, {
+      params: {
+        page: page.toString(),
+        page_size: pageSize.toString()
+      }
+    });
   }
 }

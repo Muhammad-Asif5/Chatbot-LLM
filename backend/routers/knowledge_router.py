@@ -48,8 +48,11 @@ class KBUpdate(BaseModel):
 @router.get("/")
 def get_all(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     items = db.query(KnowledgeBase).filter(KnowledgeBase.user_id == user.id).all()
-    return success_response(data=items, message=f"Retrieved {len(items)} articles successfully")
 
+    return success_response(
+        data=[_serialize(i) for i in items],
+        message=f"Retrieved {len(items)} articles successfully"
+    )
 
 @router.get("/{kb_id}")
 def get_one(
