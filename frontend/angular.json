@@ -27,9 +27,23 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "public/assets/libs/jsvectormap/jsvectormap.min.css",
+              "public/assets/libs/swiper/swiper-bundle.min.css",
+              "public/assets/css/bootstrap.min.css",
+              "public/assets/css/icons.min.css",
+              "public/assets/css/app.min.css",
+              "public/assets/css/custom.min.css"
             ],
-            "scripts": []
+            "scripts": [
+              "public/assets/js/layout.js",
+              "public/assets/libs/bootstrap/js/bootstrap.bundle.min.js",
+              "public/assets/libs/simplebar/simplebar.min.js",
+              "public/assets/libs/node-waves/waves.min.js",
+              "public/assets/libs/feather-icons/feather.min.js",
+              "public/assets/js/pages/plugins/lord-icon-2.1.0.js",
+              "public/assets/scripts/choices.min.js"
+            ]
           },
           "configurations": {
             "production": {
@@ -85,6 +99,7 @@
             ],
             "tsConfig": "tsconfig.spec.json",
             "assets": [
+              "src/assets",
               {
                 "glob": "**/*",
                 "input": "public"
@@ -98,5 +113,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

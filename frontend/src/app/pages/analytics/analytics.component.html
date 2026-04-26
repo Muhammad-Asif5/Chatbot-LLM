@@ -1,0 +1,168 @@
+<div class="page">
+  <div class="page-header">
+    <h2>📊 Analytics</h2>
+  </div>
+</div>
+
+<div class="row project-wrapper">
+  <div class="col-xxl-8">
+    <div class="row">
+      <div class="col-xl-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+                  <i data-feather="briefcase" class="text-primary"></i>💬
+                </span>
+              </div>
+              <div class="flex-grow-1 overflow-hidden ms-3">
+                <p class="text-uppercase fw-medium text-muted text-truncate mb-3">
+                  Total Questions</p>
+                <div class="d-flex align-items-center mb-3">
+                  <h4 class="fs-4 flex-grow-1 mb-0"><span class="counter-value" data-target="825">{{
+                      data?.total_questions || 0 }}</span></h4>
+                  <span class="badge bg-danger-subtle text-danger fs-12"><i
+                      class="ri-arrow-down-s-line fs-13 align-middle me-1"></i>5.02
+                    %</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
+                  <i data-feather="award" class="text-warning"></i>❓
+                </span>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-medium text-muted mb-3">Total FAQs</p>
+                <div class="d-flex align-items-center mb-3">
+                  <h4 class="fs-4 flex-grow-1 mb-0"><span class="counter-value" data-target="7522">{{ data?.total_faqs
+                      || 0 }}</span></h4>
+                  <span class="badge bg-success-subtle text-success fs-12"><i
+                      class="ri-arrow-up-s-line fs-13 align-middle me-1"></i>3.58
+                    %</span>
+                </div>
+              </div>
+            </div>
+          </div><!-- end card body -->
+        </div>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+                  <i data-feather="clock" class="text-info"></i>📄
+                </span>
+              </div>
+              <div class="flex-grow-1 overflow-hidden ms-3">
+                <p class="text-uppercase fw-medium text-muted text-truncate mb-3">Documents</p>
+                <div class="d-flex align-items-center mb-3">
+                  <h4 class="fs-4 flex-grow-1 mb-0">{{ data?.total_documents || 0 }}</h4>
+                  <span class="badge bg-danger-subtle text-danger fs-12"><i
+                      class="ri-arrow-down-s-line fs-13 align-middle me-1"></i>10.35
+                    %</span>
+                </div>
+              </div>
+            </div>
+          </div><!-- end card body -->
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xxl-12">
+        <div class="card card-height-100">
+          <div class="card-header align-items-center d-flex">
+            <h4 class="card-title mb-0 flex-grow-1">Recent Conversations</h4>
+          </div>
+
+          <div class="card-body pt-0">
+            <div class="chat-conversation p-3" id="chat-conversation" data-simplebar style="height: 280px;">
+
+              <div *ngIf="loading" class="loading">
+                Loading conversations...
+              </div>
+
+              <div *ngIf="!loading && chats.length === 0" class="empty">
+                No conversations yet.
+              </div>
+
+              <ul *ngIf="!loading && chats.length > 0" class="list-group list-group-flush border-dashed">
+                <li *ngFor="let chat of chats" class="list-group-item ps-0">
+                  <div class="row align-items-center g-3">
+                    <div class="col-auto">
+                      <div class="avatar-sm p-1 py-2 h-auto bg-light rounded-3">
+                        <div class="text-center">
+                          <h5 class="mb-0">{{ chat.created_at | date:'dd' }}</h5>
+                          <div class="text-muted">{{ chat.created_at | date:'EEE' }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col">
+                      <h5 class="text-muted mt-0 mb-1 fs-13">❓ {{ chat.question }}</h5>
+                      <a class="text-reset fs-14 mb-0">💬 {{ chat.answer }}</a>
+                      <h5 class="text-muted mt-0 mb-1 fs-13">{{ chat.created_at | date:'short' }}</h5>
+                    </div>
+
+                    <div class="col-sm-auto">
+                      <div class="avatar-group">
+                        <div class="avatar-group-item">
+                          <h5 class="text-muted mt-0 mb-1 fs-13">{{ chat.source }}</h5>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- end row -->
+                </li>
+              </ul>
+            </div>
+
+            <div *ngIf="totalChats > 0 && totalPages > 1"
+              class="align-items-center mt-2 row g-3 text-center text-sm-start">
+              <div class="col-sm">
+                <div class="text-muted">Showing <span class="fw-semibold">{{ (currentPage - 1) * pageSize + 1 }}</span>
+                  to {{ Math.min(currentPage * pageSize, totalChats) }} of <span class="fw-semibold">{{ totalChats
+                    }}</span>
+                  Conversations
+                </div>
+              </div>
+
+              <div class="col-sm-auto">
+                <ul
+                  class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-start mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 1"
+                    (click)="currentPage !== 1 && previousPage()">
+                    <span class="page-link">←</span>
+                  </li>
+
+                  <li (click)="goToPage(page)" *ngFor="let page of getPageNumbers()" class="btn-page"
+                    [class.active]="page === currentPage" class="page-item">
+                    <span class="page-link">{{ page }}</span>
+                  </li>
+
+                  <li class="btn-pagination page-item" [class.disabled]="currentPage === totalPages"
+                    (click)="currentPage !== totalPages && nextPage()">
+                    <span class="page-link">→</span>
+                  </li>
+
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

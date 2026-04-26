@@ -1,0 +1,63 @@
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between pt-4">
+            <h4 class="mb-sm-0 {{ plan }}">{{ plan | titlecase }} Plan </h4>
+
+            <span class="plan-limit">
+                {{ planLimit | number }} LLM queries / day
+                <span class="plan-note">(direct FAQ hits are always free)</span>
+            </span>
+
+            <div class="page-title-right">
+                <span><a class="upgrade-link" *ngIf="plan === 'free'" href="/dashboard/embed">Upgrade for more
+                        ↗</a></span>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="page">
+
+    <!-- Fixed Top Section -->
+    <div class="top-section">
+
+        <h3>AI Model</h3>
+        <p class="subtitle">Choose the model powering your chatbot</p>
+
+    </div>
+
+    <!-- SCROLLABLE AREA -->
+    <div class="content-wrapper">
+
+        <div class="model-cards">
+
+            <div *ngFor="let m of models" class="model-card" [class.active]="selected === m.id"
+                [class.disabled]="m.requiresGpu && !gpuAvailable" (click)="select(m.id)">
+                <div class="model-header">
+                    <span class="model-name">{{ m.label }}</span>
+
+                    <span class="model-badge" [class.active-badge]="selected === m.id">
+                        {{ selected === m.id ? '✓ Active' : 'Select' }}
+                    </span>
+                </div>
+
+                <p class="model-desc">{{ m.description }}</p>
+
+                <div class="model-meta">
+                    <span>{{ m.speed }}</span>
+                    <span>{{ m.quality }}</span>
+                    <span>{{ m.ram }}</span>
+                </div>
+
+                <div *ngIf="m.requiresGpu && !gpuAvailable" class="gpu-warn">
+                    ⚠ Requires GPU
+                </div>
+            </div>
+
+        </div>
+
+        <p class="hint" *ngIf="message">{{ message }}</p>
+
+    </div>
+</div>

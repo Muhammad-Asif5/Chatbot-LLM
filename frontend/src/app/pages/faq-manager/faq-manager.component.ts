@@ -114,7 +114,7 @@ import { FAQ, PaginatedFAQResponse } from '../../models/faq.model';
     /* ─────────────────────────────────────────────────────── */
     :host {
       display: block;
-      height: 100vh;
+      max-height: 80vh;
       width: 100%;
       overflow: hidden;
     }
@@ -129,7 +129,6 @@ import { FAQ, PaginatedFAQResponse } from '../../models/faq.model';
       width: 100%;
       overflow: hidden;
       background: #0f1419;
-      padding-bottom: 25px;
     }
 
     /* ─────────────────────────────────────────────────────── */

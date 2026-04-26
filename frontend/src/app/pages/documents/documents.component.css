@@ -1,0 +1,27 @@
+.page-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 24px;
+    }
+    .btn-upload {
+      padding: 10px 20px; background: #e94560; color: white;
+      border-radius: 8px; cursor: pointer; font-size: 14px;
+    }
+    .card {
+      background: #16213e; border-radius: 12px; padding: 24px;
+    }
+    .doc-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid #0f3460;
+    }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-icon { font-size: 28px; }
+    .doc-info { flex: 1; }
+    .doc-name { color: white; font-size: 14px; font-weight: bold; }
+    .doc-date { color: #888; font-size: 12px; }
+    .btn-del { background: none; border: none; cursor: pointer; font-size: 18px; }
+    .loading, .empty { color: #888; text-align: center; padding: 30px; }
+    .uploading {
+      background: rgba(233,69,96,0.1); border: 1px solid #e94560;
+      color: #e94560; padding: 12px; border-radius: 8px;
+      margin-bottom: 16px; text-align: center;
+    }

@@ -1,0 +1,29 @@
+ <div class="page">
+      <h2>🔗 Embed Code</h2>
+      <p class="sub">Copy and paste this code before &lt;/body&gt; tag on your website.</p>
+
+      <div class="card">
+        <h3>Your Embed Code</h3>
+        <div class="code-block">
+          <pre>{{ embedCode }}</pre>
+          <button (click)="copy()" class="btn-copy">
+            {{ copied ? '✅ Copied!' : '📋 Copy' }}
+          </button>
+        </div>
+
+        <div class="info-box">
+          <p>🔑 <strong>Owner ID:</strong> {{ userId }}</p>
+          <p>🌐 <strong>API URL:</strong> {{ baseUrl }}</p>
+        </div>
+      </div>
+
+      <div class="card preview-card">
+        <h3>📋 How to use</h3>
+        <ol>
+          <li>Copy the embed code above</li>
+          <li>Open your website's HTML file</li>
+          <li>Paste it before the <code>&lt;/body&gt;</code> tag</li>
+          <li>Save and refresh — chatbot will appear! 🎉</li>
+        </ol>
+      </div>
+    </div>

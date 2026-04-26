@@ -1,0 +1,173 @@
+ :host {
+      display: block;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #0f1419;
+      overflow: hidden;
+      padding-bottom: 30px;
+    }
+
+    /* Header */
+    .page-header {
+      padding: 24px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    h2 {
+      color: white;
+      margin: 0;
+      font-size: 22px;
+    }
+
+    /* Stats */
+    .stats-section {
+      padding: 24px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: #0f3460;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-icon { font-size: 28px; }
+    .stat-num { color: #e94560; font-size: 32px; font-weight: bold; }
+    .stat-label { color: #aaa; font-size: 13px; }
+
+    /* Content */
+    .content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .card {
+      background: #16213e;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h3 {
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    /* Chats */
+    .chat-item {
+      padding: 14px 0;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .chat-q {
+      color: white;
+      font-weight: bold;
+    }
+
+    .chat-a {
+      color: #aaa;
+      margin-top: 4px;
+    }
+
+    .chat-meta {
+      margin-top: 6px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      background: #0f3460;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .date {
+      color: #666;
+      font-size: 11px;
+    }
+
+    /* Pagination */
+    .pagination-container {
+      background: #16213e;
+      border-top: 1px solid #0f3460;
+      padding: 16px 24px;
+      flex-shrink: 0;
+    }
+
+    .pagination-info {
+      color: #aaa;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-pagination {
+      background: #0f3460;
+      border: 1px solid #e94560;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-pagination:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .page-numbers {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-page {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 6px;
+      background: #0f3460;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .btn-page.active {
+      background: #e94560;
+      color: white;
+    }
+
+    /* States */
+    .loading, .empty {
+      color: #888;
+      text-align: center;
+      padding: 60px;
+    }

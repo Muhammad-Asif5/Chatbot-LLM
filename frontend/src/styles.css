@@ -1,47 +1,23 @@
-/* ─────────────────────────────────────────────────────── */
-/* GLOBAL STYLES: Reset and Base Styles */
-/* ─────────────────────────────────────────────────────── */
-
-/* Reset all margins and padding */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Full height scroll */
+.full-height-scroll {
+  height: calc(100vh - 323px);
 }
 
-/* HTML: Full height, no overflow */
-html {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+/* Card header padding */
+.card-header {
+  padding: 16px !important;
 }
 
-/* BODY: Full height, no scroll, no overflow */
-body {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  background: #1a1a2e;
-  color: white;
+/* Form margin reset */
+/*form {
+  margin-block-end: 0em;
+}*/
+
+/* Choices.js customization */
+.choices {
+  margin-bottom: 0px !important;
 }
 
-/* APP ROOT: Ensure full height */
-app-root {
-  display: block;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Mobile viewport fix: Use dynamic viewport height (100dvh) on supported browsers */
-@supports (height: 100dvh) {
-  html {
-    height: 100dvh;
-  }
-  body {
-    height: 100dvh;
-  }
+.choices__item--selectable:hover::after {
+  display: inline-block !important;
 }

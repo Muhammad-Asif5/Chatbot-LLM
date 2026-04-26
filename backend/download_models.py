@@ -12,8 +12,8 @@ import argparse, os, torch
 DOWNLOAD_MAP = {
     "flan-t5-large": ("google/flan-t5-large", "models/flan-t5-large"),
     "phi-3-mini": ("microsoft/Phi-3-mini-4k-instruct", "models/Phi-3-mini"),
-    "gemma": ("google/gemma-2b", "models/gemma-2b"),
-    "mistral": ("mistralai/Mistral-7B-Instruct-v0.2", "models/mistral-7b"),
+    "gemma-2b": ("google/gemma-2b", "models/gemma-2b"),
+    "mistral-7b": ("mistralai/Mistral-7B-Instruct-v0.2", "models/mistral-7b"),
 }
 
 # Models that are GPU-only (need bitsandbytes 4-bit)
